@@ -1,6 +1,6 @@
 ---
 name: agent-entry-governance
-description: 治理 Agent 入口文档（AGENTS.md 及同类，具体文件名由运行环境声明）的长度和信息密度。内容包括：度量 token 与 gzip 密度并设定阈值；超限后的精简动作，如指针化下沉、归档、职责切割、拆分；以及在提交点、流水线或入口处设置强制门禁，让守卫必须被执行。当遇到「入口文档太长、要不要精简、加这段会不会超限、怎么装门禁、文档太杂要不要拆」这类问题，或需要把这套策略迁移到其他仓库、其他 Agent 框架或运行环境时使用。关键词：AGENTS.md, AGENT.md, 入口文档治理, 上下文预算, token, 信息密度, 精简, 指针化下沉, 拆分, 归档, 门禁, pre-commit。
+description: 控制 AGENTS.md / CLAUDE.md 这类 Agent 入口文档的长度和信息密度：设定上下文预算，超出的知识下沉成指针，并在提交点装守卫拦截超限内容。关键词：AGENTS.md, AGENT.md, CLAUDE.md, 入口文档治理, 上下文预算, token, 信息密度, 精简, 指针化下沉, 拆分, 归档, 门禁, pre-commit。
 ---
 
 # agent-entry-governance（Agent 入口文档治理 · 技能聚合）
