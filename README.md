@@ -1,6 +1,8 @@
 # agent-entry-governance
 
-控制 AI 代理入口文档的体积，防止它无限膨胀、过时，或在仓库里出现第二处事实源。
+一个 Agent 技能（Skill）：控制 AGENTS.md / CLAUDE.md 这类 Agent 入口文档的长度和信息密度——设定上下文预算，超出的知识下沉成指针，并在提交点装守卫拦截超限内容。
+
+把整个目录放进 Agent 框架的 skills 目录即可生效；框架读 `SKILL.md` 的 frontmatter 判断何时调用它。
 
 入口文档不是知识库，是代理的上下文入口，而默认上下文是稀缺资源。
 
@@ -23,11 +25,15 @@ AGENTS.md / CLAUDE.md 这类文件是代理每次开工时必读的内容。项�
         ├── guard.py                      判据：退出码 0 / 1 / 2，供关口 fail-closed 调用
         └── install-hook.sh               安装器：幂等把守卫装进 git 仓库的提交点
 
+技能靠三层渐进披露：`SKILL.md` 的 frontmatter 决定框架何时加载它，正文是策略与工作流，`references/` 只在交付前终审时读。
+
 阈值和 token 近似算法的唯一事实源是度量器，随时可查：
 
     python3 entry-context-budget/scripts/measure.py --print-policy
 
 ## 怎么用
+
+作为技能加载时，人不用记任何命令：框架按 `SKILL.md` 的判断在需要时加载它，Agent 自己会去量、去精简、去装守卫。想手动操作，命令如下。
 
 量一次当前入口文档：
 
