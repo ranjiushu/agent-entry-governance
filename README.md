@@ -14,6 +14,10 @@
 
 人感觉不到 token 和字节，感觉到的是页数。所以本技能的主线是打印：把入口文档排成 PDF，拿它当终审的依据。
 
+### 为什么多这一步
+
+Markdown 本来就能读，再排一遍看着多余。理由是：人感觉不到 token 和字节，感觉到的是页数、空白、和被折断的表格——编辑器里一行超长的表格只是一坨，排到页面上才看得出它散架了。排一遍买的是「通读」这个动作：人读得进去，才会读、才会改、才会把自己的判断放进来；没人维护的入口文档会烂掉，Agent 开工拿到的上下文跟着一起错。代价是 1–2 秒加一次浏览器渲染，换不来内容，也管不了机器侧的预算（那是守卫的事）。理由写全在 [entry-card-craft/references/philosophy.md](entry-card-craft/references/philosophy.md)。
+
 ```bash
 bash entry-card-craft/scripts/print-entry-doc.sh SKILL.md entry-*/SKILL.md
 ```
@@ -105,23 +109,17 @@ bash entry-card-craft/scripts/install-print-hook.sh --repo /path/to/repo
 ## 目录
 
 ```
-SKILL.md                              聚合索引：三条边界、分工秩序、关键词路由
-entry-deai-style/                     ① 去 AI 味（上游 humanizer-zh，内置降级四条）
-│   └── SKILL.md
-entry-card-craft/                     ② 简历本身：判决、排版、打印、页面终审
-│   ├── SKILL.md
-│   ├── references/philosophy.md      设计理据：为什么这么定，按需加载
-│   ├── references/final-audit.md     终审清单（叙事 / 排版 / 文风 / 调性），终审时才读
-│   └── scripts/
-│       ├── print-entry-doc.sh        打印层：把入口文档排成 A4 PDF，报页数与排版开销
-│       └── install-print-hook.sh     打印层安装器：幂等把打印挂到 post-commit（永不阻断提交）
-entry-doc-governance/                 ③ 文档治理：度量、阈值、安全下沉、提交点守卫
-    ├── SKILL.md
-    ├── references/final-audit.md     终审清单（关口 / 事实源 / 度量 / 搬迁），终审时才读
-    └── scripts/
-        ├── measure.py                度量器：只读，报告 token 与 gzip 密度
-        ├── guard.py                  判据：退出码 0 / 1 / 2，供关口 fail-closed 调用
-        └── install-hook.sh           安装器：幂等把守卫装进 git 仓库的提交点
+SKILL.md                            聚合索引：三条边界、分工秩序、关键词路由
+entry-deai-style/SKILL.md           ① 去 AI 味（上游 humanizer-zh，内置降级四条）
+entry-card-craft/                   ② 简历本身：判决、排版、打印、页面终审
+├── SKILL.md
+├── references/philosophy.md        设计理据：核心假设与判据的理由，按需加载
+├── references/final-audit.md       终审清单（叙事 / 排版 / 文风 / 调性），终审时才读
+└── scripts/{print-entry-doc.sh, install-print-hook.sh}    打印层与它的安装器
+entry-doc-governance/               ③ 文档治理：度量、阈值、安全下沉、提交点守卫
+├── SKILL.md
+├── references/final-audit.md       终审清单（关口 / 事实源 / 度量 / 搬迁），终审时才读
+└── scripts/{measure.py, guard.py, install-hook.sh}        度量器 / 判据 / 安装器
 ```
 
 技能按三层渐进披露：frontmatter 决定框架何时加载，正文放策略与工作流，`references/` 按需加载。
@@ -141,9 +139,9 @@ entry-doc-governance/                 ③ 文档治理：度量、阈值、安�
 
 | 文档 | token | 实排 | 状态 |
 |---|---|---|---|
-| `SKILL.md` | 1861 | 2 页 | 距提醒线 639 |
+| `SKILL.md` | 1953 | 2 页 | 距提醒线 547 |
 | `entry-deai-style/SKILL.md` | 780 | 1 页 | 距提醒线 1720 |
-| `entry-card-craft/SKILL.md` | 2187 | 2 页 | 距提醒线 313 |
+| `entry-card-craft/SKILL.md` | 2192 | 2 页 | 距提醒线 308 |
 | `entry-doc-governance/SKILL.md` | 2591 | 3 页 | 提醒线以上，距上限 409 |
 
 `entry-doc-governance` 停在提醒线以上、上限以内是有意留的：成员 `SKILL.md` 属于取用层，框架需要时才加载，每次注入的只有聚合层 frontmatter 那一段。判决看加载时机，不看孤立数字。
