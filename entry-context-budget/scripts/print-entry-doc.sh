@@ -80,55 +80,130 @@ CHROME="$(find_chrome)" || {
   exit 0
 }
 
-# ── 3. markdown → HTML（够看即可，不引第三方解析器）──────────────────
+# ── 3. markdown → HTML（零第三方依赖；块级结构：代码 / 引用 / 表格 / 列表 / 标题 / 段落）──
+# 三条纪律（改这里前先读）：
+#   ① 表格必须渲染成 <table>（不是等宽 pre）——pre 是引用/代码的外观，表格会因此"看起来无法渲染"；
+#   ② 引用块整体合并后**递归**渲染内部 —— 于是引用里嵌表格、嵌列表都能正常出；
+#   ③ 列表项必须有 <ul>/<ol> 包裹 —— 否则项目符号不显示，列表塌成一段段文字。
 md2html() {  # $1=md $2=html
   python3 - "$1" "$2" <<'PY'
 import html, re, sys
-lines = open(sys.argv[1], encoding="utf-8").read().split("\n")
-out, in_code, in_table = [], False, False
+
+QUOTE = re.compile(r"^\s*>\s?")
+UL = re.compile(r"^\s*[-*+]\s+")
+OL = re.compile(r"^\s*\d+[.)]\s+")
+HR = re.compile(r"^\s*(-{3,}|\*{3,}|_{3,})\s*$")
+FENCE = re.compile(r"^\s*```")
+HEAD = re.compile(r"^(#{1,6})\s+(.*)$")
+
 
 def inline(s):
     s = re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
     s = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", s)
-    s = re.sub(r"(?<![\[\w])\[([^\]]+)\]\(([^)]+)\)", r"<span class=link>\1</span>", s)
+    s = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"<span class=link>\1</span>", s)
     return s
 
-def flush_table():
-    global in_table
-    if in_table:
-        out.append("</pre>"); in_table = False
 
-for raw in lines:
-    if re.match(r"^\s*```", raw):
-        flush_table()
-        out.append("</pre>" if in_code else "<pre class=code>")
-        in_code = not in_code
-        continue
-    if in_code:
-        out.append(html.escape(raw)); continue
-    if raw.strip().startswith("|") and "|" in raw:
-        if not in_table:
-            out.append("<pre class=table>"); in_table = True
-        out.append(html.escape(raw)); continue
-    flush_table()
-    if not raw.strip():
-        out.append(""); continue
-    m = re.match(r"^(#{1,6})\s+(.*)$", raw)
-    if m:
-        n = len(m.group(1))
-        out.append("<h%d>%s</h%d>" % (n, inline(html.escape(m.group(2))), n)); continue
-    if re.match(r"^\s*[-*+]\s+", raw):
-        out.append("<li>%s</li>" % inline(re.sub(r"^\s*[-*+]\s+", "", html.escape(raw)))); continue
-    if re.match(r"^\s*\d+[.)]\s+", raw):
-        out.append("<li>%s</li>" % inline(re.sub(r"^\s*\d+[.)]\s+", "", html.escape(raw)))); continue
-    if raw.lstrip().startswith(">"):
-        out.append("<blockquote>%s</blockquote>" % inline(html.escape(raw.lstrip()[1:].strip()))); continue
-    if re.match(r"^\s*(-{3,}|\*{3,})\s*$", raw):
-        out.append("<hr>"); continue
-    out.append("<p>%s</p>" % inline(html.escape(raw)))
-flush_table()
-if in_code:
-    out.append("</pre>")
+def esc(s):
+    return inline(html.escape(s))
+
+
+def strip_q(line):
+    return QUOTE.sub("", line, count=1)
+
+
+def is_sep(line):
+    """表格分隔行：只由 | - : 与空白组成，且含 >=2 个短横。"""
+    t = line.strip()
+    return bool(t) and set(t) <= set("|-: \t") and t.count("-") >= 2
+
+
+def cells(line):
+    r = line.strip()
+    r = r[1:] if r.startswith("|") else r
+    r = r[:-1] if r.endswith("|") else r
+    return [c.strip() for c in r.split("|")]
+
+
+def take_table(lines, i):
+    head, rows = cells(lines[i]), []
+    i += 2
+    while i < len(lines) and lines[i].strip() and "|" in lines[i]:
+        rows.append(cells(lines[i]))
+        i += 1
+    t = ["<table><thead><tr>%s</tr></thead><tbody>"
+         % "".join("<th>%s</th>" % esc(c) for c in head)]
+    for r in rows:
+        t.append("<tr>%s</tr>" % "".join("<td>%s</td>" % esc(c) for c in r))
+    t.append("</tbody></table>")
+    return "".join(t), i
+
+
+def render(lines):
+    out, i, n = [], 0, len(lines)
+    while i < n:
+        raw = lines[i]
+        if FENCE.match(raw):                                   # 代码块
+            i += 1
+            buf = []
+            while i < n and not FENCE.match(lines[i]):
+                buf.append(html.escape(lines[i]))
+                i += 1
+            i += 1
+            out.append("<pre class=code>%s</pre>" % "\n".join(buf))
+            continue
+        if QUOTE.match(raw):                                   # 引用块：合并 + 内部递归
+            buf = []
+            while i < n and (QUOTE.match(lines[i]) or (buf and not lines[i].strip())):
+                buf.append(strip_q(lines[i]) if QUOTE.match(lines[i]) else "")
+                i += 1
+            out.append("<blockquote>%s</blockquote>" % render(buf))
+            continue
+        if "|" in raw and i + 1 < n and is_sep(lines[i + 1]):   # 表格（含引用内的）
+            t, i = take_table(lines, i)
+            out.append(t)
+            continue
+        if UL.match(raw) or OL.match(raw):                      # 列表
+            pat = UL if UL.match(raw) else OL
+            tag = "ul" if pat is UL else "ol"
+            items = []
+            while i < n and pat.match(lines[i]):
+                item = pat.sub("", lines[i], count=1)
+                i += 1
+                while (i < n and lines[i].strip() and not pat.match(lines[i])
+                       and not FENCE.match(lines[i]) and not QUOTE.match(lines[i])
+                       and not HEAD.match(lines[i]) and "|" not in lines[i]):
+                    item += " " + lines[i].strip()
+                    i += 1
+                items.append("<li>%s</li>" % esc(item))
+            out.append("<%s>%s</%s>" % (tag, "".join(items), tag))
+            continue
+        if HR.match(raw):
+            out.append("<hr>")
+            i += 1
+            continue
+        m = HEAD.match(raw)
+        if m:
+            lv = len(m.group(1))
+            out.append("<h%d>%s</h%d>" % (lv, esc(m.group(2)), lv))
+            i += 1
+            continue
+        if not raw.strip():
+            i += 1
+            continue
+        buf = [raw.strip()]                                     # 段落：合并连续普通行
+        i += 1
+        while (i < n and lines[i].strip() and not FENCE.match(lines[i])
+               and not QUOTE.match(lines[i]) and not HEAD.match(lines[i])
+               and not UL.match(lines[i]) and not OL.match(lines[i])
+               and not HR.match(lines[i]) and "|" not in lines[i]):
+            buf.append(lines[i].strip())
+            i += 1
+        out.append("<p>%s</p>" % esc(" ".join(buf)))
+    return "\n".join(out)
+
+
+body = render(open(sys.argv[1], encoding="utf-8").read().split("\n"))
 
 # 页数绑定在这份 CSS 上：换字号/行距/边距，页数就变。所以「标准排版」必须写死在一处，
 # 跟阈值同一个纪律——两种排版下的页数不是同一把尺子，不可互相比较。
@@ -140,15 +215,22 @@ h1,h2,h3,h4 { line-height: 1.3; margin: 1.1em 0 .45em; page-break-after: avoid; 
 h1 { font-size: 17pt; border-bottom: 1px solid #c9c9c9; padding-bottom: .25em; }
 h2 { font-size: 13.5pt; } h3 { font-size: 12pt; } h4 { font-size: 11pt; }
 p { margin: .45em 0; }
-li { margin: .18em 0 0 1.4em; }
+ul, ol { margin: .3em 0 .4em 1.25em; padding: 0; }
+li { margin: .16em 0; }
 pre { background: #f6f6f6; padding: .5em .7em; font-size: 9pt; line-height: 1.45;
       white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
-pre.code, pre.table { border-left: 2px solid #bfbfbf; }
+pre.code { border-left: 2px solid #bfbfbf; }
+table { border-collapse: collapse; margin: .55em 0; width: 100%%; font-size: 10pt; }
+th, td { border: 1px solid #cfcfcf; padding: .25em .5em; text-align: left; vertical-align: top; }
+thead th { background: #f2f2f2; }
+tbody tr:nth-child(even) td { background: #fafafa; }
+tr { page-break-inside: avoid; }
+blockquote table { width: auto; font-size: 9.5pt; }
 code { font-size: .93em; background: #f0f0f0; padding: 0 .18em; }
 blockquote { margin: .5em 0; padding: .1em .9em; border-left: 3px solid #d0d0d0; color: #444; }
 hr { border: 0; border-top: 1px solid #ddd; margin: 1em 0; }
 .link { text-decoration: underline; }
-</style></head><body>%s</body></html>""" % "\n".join(out)
+</style></head><body>%s</body></html>""" % body
 open(sys.argv[2], "w", encoding="utf-8").write(doc)
 PY
 }
