@@ -18,8 +18,6 @@ AGENTS.md / CLAUDE.md 这类文件是代理每次开工时必读的内容。项�
 
 长度不是目标。入口文档要能让第一次翻开它的 Agent 说清「这是什么地方、为什么有这些规矩、细节去哪找」；精简砍的是重复、背景和可派生的事实，不是因果。一张每行都写着「→ 见某文件」的卡，读者得先跳出去才知道为什么要跳。
 
-再往前一步，判准的立足点是**人**：入口文档没有客观最优解，所以取「好看、易看、愿意看」当标准（详见 `entry-context-budget/SKILL.md` §〇）。人读得进去才愿意改、愿意用，协作里人的判断是主要变量；体积阈值只管有没有失控。
-
 ## 组成
 
 ```
@@ -27,6 +25,8 @@ SKILL.md                              聚合索引：关键词路由与成员分
 entry-context-budget/
 ├── SKILL.md                          策略：要什么（正面标准，不写环境专名）
 ├── references/final-audit.md         交付前终审清单，只在终审阶段加载
+├── references/philosophy.md          设计理据：为什么这么定，按需加载
+├── references/style.md               文风正面标准：写文档与终审时对照
 └── scripts/
     ├── measure.py                    度量器：只读，报告 token 与 gzip 密度
     ├── guard.py                      判据：退出码 0 / 1 / 2，供关口 fail-closed 调用
@@ -35,7 +35,7 @@ entry-context-budget/
     └── install-print-hook.sh         可选层安装器：幂等把打印挂到 post-commit（永不阻断提交）
 ```
 
-技能靠三层渐进披露：`SKILL.md` 的 frontmatter 决定框架何时加载它，正文是策略与工作流，`references/` 只在交付前终审时读。
+技能靠三层渐进披露：`SKILL.md` 的 frontmatter 决定框架何时加载它，正文是策略与工作流，`references/` 按需加载——`final-audit.md` 只在交付前终审时读，`philosophy.md` 在需要解释或修改判据时读，`style.md` 在写文档与终审文风时读。
 
 阈值和 token 近似算法的唯一事实源是度量器，随时可查：
 

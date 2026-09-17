@@ -23,6 +23,8 @@ description: 控制 AGENTS.md / CLAUDE.md 这类 Agent 入口文档的长度和�
 | 给新项目、新工作区写一张入口卡（简历） | entry-context-budget（首部与 §〇） |
 | 怕精简改坏精度、改出事实错误 | entry-context-budget（§〇 两条边界） |
 | 拿不准写得好不好，想看成品 | entry-context-budget（人类刻度 · 实排页面） |
+| 想知道为什么这么定 / 要改判据本身 | entry-context-budget/references/philosophy.md |
+| 写入口文档时要文风标准 | entry-context-budget/references/style.md |
 
 ## 二、成员
 
