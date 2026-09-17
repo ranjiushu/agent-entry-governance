@@ -141,10 +141,10 @@ entry-doc-governance/                 ③ 文档治理：度量、阈值、安�
 
 | 文档 | token | 实排 | 状态 |
 |---|---|---|---|
-| `SKILL.md` | 1544 | 2 页 | 距提醒线 956 |
+| `SKILL.md` | 1861 | 2 页 | 距提醒线 639 |
 | `entry-deai-style/SKILL.md` | 780 | 1 页 | 距提醒线 1720 |
-| `entry-card-craft/SKILL.md` | 2103 | 2 页 | 距提醒线 397 |
-| `entry-doc-governance/SKILL.md` | 2593 | 3 页 | 提醒线以上，距上限 407 |
+| `entry-card-craft/SKILL.md` | 2187 | 2 页 | 距提醒线 313 |
+| `entry-doc-governance/SKILL.md` | 2591 | 3 页 | 提醒线以上，距上限 409 |
 
 `entry-doc-governance` 停在提醒线以上、上限以内是有意留的：成员 `SKILL.md` 属于取用层，框架需要时才加载，每次注入的只有聚合层 frontmatter 那一段。判决看加载时机，不看孤立数字。
 
