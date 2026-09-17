@@ -1,11 +1,13 @@
 ---
-name: agent-entry-governance
-description: 控制 AGENTS.md / CLAUDE.md 这类 Agent 入口文档的长度和信息密度：设定上下文预算，超出的知识下沉成指针，并在提交点装守卫拦截超限内容。关键词：AGENTS.md, AGENT.md, CLAUDE.md, 入口文档治理, 上下文预算, token, 信息密度, 精简, 指针化下沉, 拆分, 归档, 门禁, pre-commit。
+name: repo-resume
+description: 把 AGENTS.md / CLAUDE.md 这类 Agent 入口文档写成仓库的「简历」，并把它排成 A4 页面做终审：判准落在人的阅读体验上，按 token 预算精简，超出部分安全下沉成指针，最后在提交点装守卫拦截超限。当「入口文档太长 / 要不要精简 / 写得好不好 / 想看看排出来什么样 / 要不要装门禁」时使用。关键词：AGENTS.md, CLAUDE.md, 入口文档, 仓库简历, 上下文预算, token, 精简, 指针化下沉, 打印 PDF, 页面终审, 排版, 门禁, pre-commit。
 ---
 
-# agent-entry-governance（Agent 入口文档治理 · 技能聚合）
+# repo-resume（仓库的简历 · 技能聚合）
 
-让入口文档成为项目／工作区的「简历」——简洁、美观、优雅；同时对机器友好：不无限膨胀（不挤爆上下文）、不腐烂成过时副本、不出现第二处事实源、不为了好看牺牲精度。
+入口文档是仓库的简历。要接手的人看它，agent 也看它，而且 agent 通常是第一读者：每次会话开头，这份文件被整份注入。本技能管三件事——写成简历、排成页面看一遍、在提交点守住底线；同时对机器友好：不无限膨胀（不挤爆上下文）、不腐烂成过时副本、不出现第二处事实源、不为了好看牺牲精度。
+
+判断的落点是页面。token 与字节人感觉不到，页数能，所以主线动作是**打印**：把入口文档排成 A4 PDF，通读实排结果（entry-card-craft）；体积与阈值是机器侧的代理指标（entry-doc-governance）；文风归 entry-deai-style。打印不阻断流程，但它是终审的依据，缺了页面就等于判决没有依据。
 
 组织原则：聚合层只做索引、分工与跨成员约束，不复制成员内容；成员只做策略（不变量）加机制（可替换实现），策略层不写环境专名。
 
@@ -15,7 +17,7 @@ description: 控制 AGENTS.md / CLAUDE.md 这类 Agent 入口文档的长度和�
 
 ## 分工秩序
 
-三个成员各司其职，但有序：治理是底线，简历式优化是在治理约束内做美——排版挣来的「愿意看」，不许用指针弹球和事实模糊来换。去味服务前两者：凡是写文档、改文档、终审文档的场景都可触发它。
+三个成员各司其职，但有序：简历式优化是主线（写作加打印终审），治理是底线（体积、下沉与提交点），去味修文风。治理约束不该被好看挤掉；排版挣来的「愿意看」，也不许用指针弹球和事实模糊来换。写文档、改文档、终审文档的场景都可触发去味。
 
 ## 一、关键词速查
 
@@ -27,9 +29,10 @@ description: 控制 AGENTS.md / CLAUDE.md 这类 Agent 入口文档的长度和�
 | 给仓库装文档门禁（关键路径上的关口） | entry-doc-governance（安装器） |
 | 把门禁搬到别的框架 / 别的运行环境 | entry-doc-governance（可移植性） |
 | 卡片读起来累 / 不好看 / 结构与排版 | entry-card-craft |
-| 给新项目、新工作区写一张入口卡（简历） | entry-card-craft |
+| 给新项目、新仓库写一张入口卡（简历） | entry-card-craft |
 | 简历与 README 怎么分工 | entry-card-craft（代价结构与三测试） |
-| 拿不准写得好不好，想看成品 / 实排页面 | entry-card-craft（渲染层 · 页面终审） |
+| 想看看排出来几页 / 末页是不是只剩一行 | entry-card-craft（打印层） |
+| 终审要过一遍页面 / 拿不准写得好不好 | entry-card-craft（页面终审） |
 | 这段文字像 AI 写的 / 去味 / 文风生硬 | entry-deai-style（上游 humanizer-zh） |
 | 想知道为什么这么定 / 要改判据本身 | entry-card-craft/references/philosophy.md |
 
@@ -37,9 +40,9 @@ description: 控制 AGENTS.md / CLAUDE.md 这类 Agent 入口文档的长度和�
 
 | 子技能 | 用途 | 读取路径 |
 |---|---|---|
-| entry-deai-style | 去 AI 味：文风判据。完整标准在上游 humanizer-zh，本成员负责衔接治理流程并提供内置降级层 | agent-entry-governance/entry-deai-style/SKILL.md |
-| entry-card-craft | 简历式优化：以人为本的判决（好看、易看、愿意看）、简历与 README 的分工、结构与排版、实排页面终审 | agent-entry-governance/entry-card-craft/SKILL.md |
-| entry-doc-governance | 文档治理：度量（token / gzip / 密度）与阈值判据、超限后的安全下沉（指针可达、无第二事实源）、把守卫装成必被执行的关口 | agent-entry-governance/entry-doc-governance/SKILL.md |
+| entry-deai-style | 去 AI 味：文风判据。完整标准在上游 humanizer-zh，本成员负责衔接治理流程并提供内置降级层 | repo-resume/entry-deai-style/SKILL.md |
+| entry-card-craft | 简历式优化：以人为本的判决（好看、易看、愿意看）、简历与 README 的分工、结构与排版、实排页面终审 | repo-resume/entry-card-craft/SKILL.md |
+| entry-doc-governance | 文档治理：度量（token / gzip / 密度）与阈值判据、超限后的安全下沉（指针可达、无第二事实源）、把守卫装成必被执行的关口 | repo-resume/entry-doc-governance/SKILL.md |
 
 ## 三、调用方式
 
@@ -48,7 +51,7 @@ description: 控制 AGENTS.md / CLAUDE.md 这类 Agent 入口文档的长度和�
 ## 四、运行环境
 
 - entry-doc-governance 的度量器与判据（measure.py / guard.py）：纯标准库，无第三方依赖、不联网、不读环境变量、不依赖版本控制（版本控制只是取将生效版本的增强）。安装器（install-hook.sh）是例外：它把守卫装进 git 仓库，依赖 git、写文件、幂等。
-- entry-card-craft 的渲染层（print-entry-doc.sh / install-print-hook.sh）是**可选层**：依赖无头浏览器，不进判据、不阻断任何流程，缺依赖就显式跳过并说明。
+- entry-card-craft 的打印层（print-entry-doc.sh / install-print-hook.sh）是**判决层**：终审要看实排页面，它给出页数、排版开销与末页填充的判据。它需要无头浏览器，一份要 1–2 秒，所以不进任何阻断路径、不返回非零；缺依赖要显式说「这次没看到页面」，不许静默跳过。
 - entry-deai-style 依赖上游技能 humanizer-zh；缺席时用内置降级层并显式声明。
 
 前提缺失时必须显式响应，不得静默降级。

@@ -20,8 +20,8 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PAYLOAD=(measure.py guard.py)
 NOTICE="SOURCE.md"
-MARK_BEGIN="# >>> agent-entry-governance: entry-doc-governance (start) >>>"
-MARK_END="# <<< agent-entry-governance: entry-doc-governance (end) <<<"
+MARK_BEGIN="# >>> repo-resume: entry-doc-governance (start) >>>"
+MARK_END="# <<< repo-resume: entry-doc-governance (end) <<<"
 # 技能改名前装过的标记块；安装时自动迁移，避免叠成两块把守卫跑两遍
 LEGACY_MARKS=(
   "# >>> doc-governance: agents-md-budget (start) >>>|# <<< doc-governance: agents-md-budget (end) <<<"
@@ -101,7 +101,7 @@ fi
 # ── 组块内容 ──────────────────────────────────────────────────────────
 read -r -d '' BLOCK <<BLOCKEOF || true
 $MARK_BEGIN
-# 由 agent-entry-governance 技能（子技能 entry-doc-governance）的 install-hook.sh 写入，**勿手改**；
+# 由 repo-resume 技能（子技能 entry-doc-governance）的 install-hook.sh 写入，**勿手改**；
 # 更新走上游重跑安装脚本（幂等）。守卫本体：tools/guards/guard.py
 {
   _gd_root="\$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -162,7 +162,7 @@ done
 cat > "$GUARD_DIR/$NOTICE" <<'NOTICEEOF'
 # tools/guards —— 文档守卫（分发副本）
 
-本目录由 agent-entry-governance 技能（子技能 `entry-doc-governance`）的 `install-hook.sh` 写入，**请勿手改**：
+本目录由 repo-resume 技能（子技能 `entry-doc-governance`）的 `install-hook.sh` 写入，**请勿手改**：
 手改会在下次安装时被覆盖，并让仓库与上游漂移。
 
 - 上游：技能的 `entry-doc-governance/scripts/`（canonical）
@@ -172,7 +172,7 @@ cat > "$GUARD_DIR/$NOTICE" <<'NOTICEEOF'
 NOTICEEOF
 
 if [ ! -f "$HOOK" ]; then
-  printf '#!/usr/bin/env bash\n# 由 agent-entry-governance 技能 create 的钩子（原先无 pre-commit）\nset -uo pipefail\n\n' > "$HOOK"
+  printf '#!/usr/bin/env bash\n# 由 repo-resume 技能 create 的钩子（原先无 pre-commit）\nset -uo pipefail\n\n' > "$HOOK"
 fi
 
 for _m in "${LEGACY_MARKS[@]}"; do

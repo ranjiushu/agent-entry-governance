@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# 由 agent-entry-governance 技能 create 的钩子（原先无 post-commit）
+# 由 repo-resume 技能 create 的钩子（原先无 post-commit）
 set -uo pipefail
 
-# >>> agent-entry-governance: entry-doc-print (start) >>>
-# 由 agent-entry-governance 技能（子技能 entry-card-craft）的 install-print-hook.sh 写入，
+# >>> repo-resume: entry-doc-print (start) >>>
+# 由 repo-resume 技能（子技能 entry-card-craft）的 install-print-hook.sh 写入，
 # **勿手改**；更新走上游重跑安装脚本（幂等）。
-# 这是**彩蛋层，不是门禁**：本块永不返回非零，渲染失败只留一行说明。
+# 这是**打印层（判决依据），不是门禁**：本块永不返回非零，渲染失败只留一行说明。
 {
   _ep_root="$(git rev-parse --show-toplevel 2>/dev/null)"
   _ep_script="$_ep_root/entry-card-craft/scripts/print-entry-doc.sh"
@@ -21,8 +21,8 @@ set -uo pipefail
       done
     fi
     if [ "$_ep_run" = 1 ]; then
-      ( cd "$_ep_root" && bash "$_ep_script" --quiet --out "/workspace/out/pdf/agent-entry-governance" --archive "/workspace/out/archive/agent-entry-governance" "${_ep_docs[@]}" ) || true
+      ( cd "$_ep_root" && bash "$_ep_script" --quiet --out "/workspace/out/pdf/repo-resume" --archive "/workspace/out/archive/repo-resume" "${_ep_docs[@]}" ) || true
     fi
   fi
 }
-# <<< agent-entry-governance: entry-doc-print (end) <<<
+# <<< repo-resume: entry-doc-print (end) <<<

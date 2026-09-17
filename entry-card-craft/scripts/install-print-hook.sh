@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 把「入口文档打印」这个彩蛋装进某个 git 仓库（**可选层，不是门禁**）。
+# 把「入口文档打印」装进某个 git 仓库（**判决层**：不阻断流程，但它是页面终审的依据）。
 #
 # 装两样东西：
 #   <repo>/tools/entry-doc/print-entry-doc.sh   渲染器本体（**入库**，随 clone 走）
@@ -8,7 +8,7 @@
 #
 # 为什么挂 post-commit 而不是 pre-commit：
 #   渲染要 1–2 秒，而**慢钩子会把人逼去用 --no-verify**，届时 pre-commit 里的真守卫
-#   会被一起跳过。彩蛋绝不能拖累防线，所以它挂在提交完成之后，且本块**永不返回非零**。
+#   会被一起跳过。所以它挂在提交完成之后，且本块**永不返回非零** —— 不阻断不等于次要，它管的是判决那一侧。
 #
 # 用法：
 #   bash install-print-hook.sh                          # 装到当前仓库，自动发现 AGENTS.md
@@ -30,8 +30,8 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PAYLOAD_SCRIPT="print-entry-doc.sh"
-MARK_BEGIN="# >>> agent-entry-governance: entry-doc-print (start) >>>"
-MARK_END="# <<< agent-entry-governance: entry-doc-print (end) <<<"
+MARK_BEGIN="# >>> repo-resume: entry-doc-print (start) >>>"
+MARK_END="# <<< repo-resume: entry-doc-print (end) <<<"
 
 strip_block() {  # $1=钩子文件 $2=起始标记 $3=结束标记
   [ -f "$1" ] || return 0
@@ -104,7 +104,7 @@ else
 fi
 
 # 要打印哪些文件：显式 --docs 优先，否则落成默认的自动发现名单。
-# 一律写进钩子（不留分支）：钩子里少一个分支就少一处能让彩蛋变哑的地方。
+# 一律写进钩子（不留分支）：钩子里少一个分支就少一处能让打印变哑的地方。
 [ -z "$DOCS" ] && DOCS="AGENTS.md AGENT.md"
 read -r -d '' DOCS_BLOCK <<DOCSEOF || true
 _ep_docs=($(for d in $DOCS; do printf '"%s" ' "$d"; done))
@@ -118,7 +118,7 @@ if [ "$MODE" = check ]; then
     echo "[print-install] ❌ core.hooksPath=$hooks_path（应为 .githooks）——钩子不会生效" >&2; rc=1
   fi
   if [ ! -f "$HOOK" ] || ! grep -qF "$MARK_BEGIN" "$HOOK"; then
-    echo "[print-install] ❌ $HOOK 里没有本彩蛋的调用块" >&2; rc=1
+    echo "[print-install] ❌ $HOOK 里没有本打印层的调用块" >&2; rc=1
   fi
   if ! grep -qF "$(echo $DOCS | awk '{print $1}')" "$HOOK"; then
     echo "[print-install] ⚠️  钩子里的文档清单与本次 --docs 不一致" >&2; rc=1
@@ -156,16 +156,16 @@ if [ "$MODE" = check ]; then
 fi
 
 # ── 组块内容 ──────────────────────────────────────────────────────────
-# 产出与归档目录：给了就写死进钩子（钩子里少一个分支，就少一处能让彩蛋变哑的地方）
+# 产出与归档目录：给了就写死进钩子（钩子里少一个分支，就少一处能让打印变哑的地方）
 EP_ARGS=""
 [ -n "$OUT" ] && EP_ARGS="--out \"$OUT\" "
 [ -n "$ARCHIVE" ] && EP_ARGS="$EP_ARGS--archive \"$ARCHIVE\" "
 
 read -r -d '' BLOCK <<BLOCKEOF || true
 $MARK_BEGIN
-# 由 agent-entry-governance 技能（子技能 entry-card-craft）的 install-print-hook.sh 写入，
+# 由 repo-resume 技能（子技能 entry-card-craft）的 install-print-hook.sh 写入，
 # **勿手改**；更新走上游重跑安装脚本（幂等）。
-# 这是**彩蛋层，不是门禁**：本块永不返回非零，渲染失败只留一行说明。
+# 这是**打印层（判决依据），不是门禁**：本块永不返回非零，渲染失败只留一行说明。
 {
   _ep_root="\$(git rev-parse --show-toplevel 2>/dev/null)"
   _ep_script="\$_ep_root/$RUNNER_REL"
@@ -193,7 +193,7 @@ if [ "$MODE" = uninstall ]; then
     strip_block "$HOOK" "$MARK_BEGIN" "$MARK_END"
     echo "[print-install] ✅ 已移除钩子块：$HOOK"
   else
-    echo "[print-install] 钩子里没有本彩蛋的块，无需移除"
+    echo "[print-install] 钩子里没有本打印层的块，无需移除"
   fi
   if [ -z "$SELF_SCRIPT" ]; then
     rm -rf "$PAYLOAD_DIR/__pycache__"
@@ -227,9 +227,9 @@ if [ -z "$SELF_SCRIPT" ]; then
   cp "$HERE/$PAYLOAD_SCRIPT" "$PAYLOAD_DIR/$PAYLOAD_SCRIPT"
   chmod +x "$PAYLOAD_DIR/$PAYLOAD_SCRIPT"
   cat > "$PAYLOAD_DIR/SOURCE.md" <<'NOTICEEOF'
-# tools/entry-doc —— 入口文档打印（分发副本，**可选层**）
+# tools/entry-doc —— 入口文档打印（分发副本，判决层）
 
-本目录由 agent-entry-governance 技能（子技能 `entry-card-craft`）的 `install-print-hook.sh` 写入，
+本目录由 repo-resume 技能（子技能 `entry-card-craft`）的 `install-print-hook.sh` 写入，
 **请勿手改**：手改会在下次安装时被覆盖，并让仓库与上游漂移。
 
 - 上游：技能的 `entry-card-craft/scripts/`
@@ -246,7 +246,7 @@ NOTICEEOF
 fi
 
 if [ ! -f "$HOOK" ]; then
-  printf '#!/usr/bin/env bash\n# 由 agent-entry-governance 技能 create 的钩子（原先无 post-commit）\nset -uo pipefail\n\n' > "$HOOK"
+  printf '#!/usr/bin/env bash\n# 由 repo-resume 技能 create 的钩子（原先无 post-commit）\nset -uo pipefail\n\n' > "$HOOK"
 fi
 
 python3 - "$HOOK" "$MARK_BEGIN" "$MARK_END" "$BLOCK" <<'PYEOF'

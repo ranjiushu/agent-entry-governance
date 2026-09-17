@@ -33,7 +33,7 @@ description: AGENTS.md 类 Agent 入口文档的体积与信息密度治理，�
 
 数值与适用范围以 --print-policy 及度量实现自述为准，勿抄；别在任何文档里记当前数值（漂移事实），要现状现场量。
 
-人类刻度：人感觉不到 token，感觉到的是页面。实排页数与排版开销由 entry-card-craft 的渲染层（可选）给出；本判据只用 token，页面是判决依据（entry-card-craft §〇），不作本判据的输入。
+人类刻度：人感觉不到 token，感觉到的是页面。实排页数与排版开销由 entry-card-craft 的打印层给出（不阻断流程，但它是终审依据）；本判据只用 token，页面归 entry-card-craft §〇 判决。
 
 ## 三、超限了怎么办
 
