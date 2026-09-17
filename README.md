@@ -4,13 +4,15 @@
 
 把整个目录放进 Agent 框架的 skills 目录即可生效；框架读 `SKILL.md` 的 frontmatter 判断何时调用它。
 
-入口文档不是知识库，是代理的上下文入口，而默认上下文是稀缺资源。
+入口文档不是知识库，是代理的上下文入口，而默认上下文是稀缺资源。但判准的立足点在人：既然没有客观最优解，就取「好看、易看、愿意看」当标准——可读性是分发机制，写得像人能读的，才会被接手、被引用、被改。机器能强制的只有体积代理，它管的是有没有失控。
 
 ## 它解决什么问题
 
 AGENTS.md / CLAUDE.md 这类文件是代理每次开工时必读的内容。项目长大后，它容易长成一部百科全书，代理每次都要先读一遍。本技能把「入口知识」和「项目知识」分开，治理链路是：
 
-    测量 → 判定去留 → 下沉 → 报账 → 终审
+```
+测量 → 判定去留 → 下沉 → 报账 → 终审
+```
 
 链路末端是装在提交点上的守卫：内容超限就拦下提交，不等到上下文被撑爆才发现。
 
@@ -20,22 +22,26 @@ AGENTS.md / CLAUDE.md 这类文件是代理每次开工时必读的内容。项�
 
 ## 组成
 
-    SKILL.md                              聚合索引：关键词路由与成员分工
-    entry-context-budget/
-    ├── SKILL.md                          策略：要什么（正面标准，不写环境专名）
-    ├── references/final-audit.md         交付前终审清单，只在终审阶段加载
-    └── scripts/
-        ├── measure.py                    度量器：只读，报告 token 与 gzip 密度
-        ├── guard.py                      判据：退出码 0 / 1 / 2，供关口 fail-closed 调用
-        ├── install-hook.sh               安装器：幂等把守卫装进 git 仓库的提交点
-        ├── print-entry-doc.sh            可选层：把入口文档排成 A4 PDF，报页数与排版开销
-        └── install-print-hook.sh         可选层安装器：幂等把打印挂到 post-commit（永不阻断提交）
+```
+SKILL.md                              聚合索引：关键词路由与成员分工
+entry-context-budget/
+├── SKILL.md                          策略：要什么（正面标准，不写环境专名）
+├── references/final-audit.md         交付前终审清单，只在终审阶段加载
+└── scripts/
+    ├── measure.py                    度量器：只读，报告 token 与 gzip 密度
+    ├── guard.py                      判据：退出码 0 / 1 / 2，供关口 fail-closed 调用
+    ├── install-hook.sh               安装器：幂等把守卫装进 git 仓库的提交点
+    ├── print-entry-doc.sh            可选层：把入口文档排成 A4 PDF，报页数与排版开销
+    └── install-print-hook.sh         可选层安装器：幂等把打印挂到 post-commit（永不阻断提交）
+```
 
 技能靠三层渐进披露：`SKILL.md` 的 frontmatter 决定框架何时加载它，正文是策略与工作流，`references/` 只在交付前终审时读。
 
 阈值和 token 近似算法的唯一事实源是度量器，随时可查：
 
-    python3 entry-context-budget/scripts/measure.py --print-policy
+```
+python3 entry-context-budget/scripts/measure.py --print-policy
+```
 
 ## 怎么用
 
@@ -43,15 +49,21 @@ AGENTS.md / CLAUDE.md 这类文件是代理每次开工时必读的内容。项�
 
 量一次当前入口文档：
 
-    python3 entry-context-budget/scripts/measure.py AGENTS.md
+```
+python3 entry-context-budget/scripts/measure.py AGENTS.md
+```
 
 装到提交点（幂等，可反复执行；守卫本体随仓库入库，clone 后仍有效）：
 
-    bash entry-context-budget/scripts/install-hook.sh --repo /path/to/repo
+```
+bash entry-context-budget/scripts/install-hook.sh --repo /path/to/repo
+```
 
 校验安装状态：
 
-    bash entry-context-budget/scripts/install-hook.sh --repo /path/to/repo --check
+```
+bash entry-context-budget/scripts/install-hook.sh --repo /path/to/repo --check
+```
 
 参数细节看各脚本的 --help 和文件头，本文件不复述。
 
@@ -77,6 +89,4 @@ AGENTS.md / CLAUDE.md 这类文件是代理每次开工时必读的内容。项�
 
 可移植单元是整个目录。支持 skills 的框架直接放进 skills 目录读 `SKILL.md`；不支持的框架把 `SKILL.md` 正文放进系统提示词，脚本照常直接运行。有版本控制就把守卫装到提交点；只有流水线或启动入口，就在其中 fail-closed 调用判据；一个关口都没有，就退化为入口处的显式提示，不假装已装。
 
-## 许可
-
-MIT，见 [LICENSE](LICENSE)。
+**许可**：MIT，见 [LICENSE](LICENSE)。
