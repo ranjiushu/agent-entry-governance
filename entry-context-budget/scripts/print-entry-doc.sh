@@ -13,6 +13,8 @@
 #   print-entry-doc.sh SKILL.md docs/RULES.md   # 指定文件（可多个：入口文档不止一份时）
 #   print-entry-doc.sh --staged                 # 排 git 暂存版（即将提交的那份）
 #   print-entry-doc.sh --out DIR                # 输出目录（默认 <仓库>/.git/entry-doc-pdf）
+#   print-entry-doc.sh --archive DIR            # 归档目录：同一文档名只留最新一份，旧的移到这里
+#                                               #   不给 --archive 时退化为「保留最近 KEEP 份」
 #   print-entry-doc.sh --quiet                  # 只报结果行（适合挂进钩子）
 #
 # 退出码
@@ -34,14 +36,17 @@ TAG="[print]"
 QUIET=0
 STAGED=0
 OUT_DIR=""
+ARCHIVE_DIR=""
 TARGETS=()
-KEEP="${AGENT_DOC_PDF_KEEP:-10}"
+KEEP="${AGENT_DOC_PDF_KEEP:-10}"                 # 无 --archive 时的滚动保留份数
+ARCHIVE_KEEP="${AGENT_DOC_PDF_ARCHIVE_KEEP:-30}"  # 归档目录每个文档名的封顶份数（0 = 不限）
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --staged) STAGED=1; shift ;;
     --quiet)  QUIET=1; shift ;;
     --out)    OUT_DIR="${2:-}"; shift 2 ;;
+    --archive) ARCHIVE_DIR="${2:-}"; shift 2 ;;
     -h|--help) awk 'NR==1{next} /^#/{print; next} {exit}' "$0"; exit 0 ;;
     -*) echo "$TAG 未知参数：$1" >&2; exit 1 ;;
     *)  TARGETS+=("$1"); shift ;;
@@ -314,8 +319,21 @@ if not quiet:
 PY
   rm -rf "$tmp"
 
-  # 滚动保留：每个文档名只留最近 $KEEP 份（一个 PDF 内嵌中文字体约 600KB，不清理会攒体积）
-  if [ "$KEEP" -gt 0 ] 2>/dev/null; then
+  # 保留策略
+  #   给了 --archive：产出位只留最新一份，旧的移进归档（归档再按 ARCHIVE_KEEP 封顶）
+  #   没给：退化为滚动保留最近 $KEEP 份（一个 PDF 内嵌中文字体约 600KB，不清理会攒体积）
+  if [ -n "$ARCHIVE_DIR" ]; then
+    ls -1t "$dest/${base}-"*.pdf 2>/dev/null | tail -n +2 | while read -r old; do
+      if mkdir -p "$ARCHIVE_DIR" 2>/dev/null && mv -f "$old" "$ARCHIVE_DIR/" 2>/dev/null; then
+        [ "$QUIET" = 1 ] || echo "$TAG   归档：$(basename "$old") → $ARCHIVE_DIR"
+      fi
+    done
+    if [ "$ARCHIVE_KEEP" -gt 0 ] 2>/dev/null; then
+      ls -1t "$ARCHIVE_DIR/${base}-"*.pdf 2>/dev/null | tail -n +"$((ARCHIVE_KEEP + 1))" | while read -r gone; do
+        rm -f "$gone"
+      done
+    fi
+  elif [ "$KEEP" -gt 0 ] 2>/dev/null; then
     ls -1t "$dest/${base}-"*.pdf 2>/dev/null | tail -n +"$((KEEP + 1))" | while read -r old; do
       rm -f "$old"
     done

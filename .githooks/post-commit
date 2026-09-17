@@ -21,7 +21,7 @@ set -uo pipefail
       done
     fi
     if [ "$_ep_run" = 1 ]; then
-      ( cd "$_ep_root" && bash "$_ep_script" --quiet --out "/workspace/out/pdf/agent-entry-governance" "${_ep_docs[@]}" ) || true
+      ( cd "$_ep_root" && bash "$_ep_script" --quiet --out "/workspace/out/pdf/agent-entry-governance" --archive "/workspace/out/archive/agent-entry-governance" "${_ep_docs[@]}" ) || true
     fi
   fi
 }

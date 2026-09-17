@@ -19,6 +19,8 @@
 #                                                       #   （本技能自己的仓库用它，避免同一文件两份）
 #   bash install-print-hook.sh --out <绝对目录>          # 产出集中到指定目录（默认 <仓库>/.git/entry-doc-pdf/）
 #                                                       #   多个仓库共用一个输出位时，按仓分子目录传入即可
+#   bash install-print-hook.sh --archive <绝对目录>      # 归档目录：产出位只留最新一份，旧的移进去
+#                                                       #   （不给就退化为「保留最近 KEEP 份」）
 #   bash install-print-hook.sh --check | --dry-run | --uninstall
 #
 # 跳过规则：本次提交**没碰**声明的入口文档时自动跳过（存量豁免）；
@@ -49,12 +51,14 @@ REPO=""
 DOCS=""
 SELF_SCRIPT=""
 OUT=""
+ARCHIVE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --repo)   REPO="${2:-}"; shift 2 ;;
     --docs)   DOCS="${2:-}"; shift 2 ;;
     --script) SELF_SCRIPT="${2:-}"; shift 2 ;;
     --out)    OUT="${2:-}"; shift 2 ;;
+    --archive) ARCHIVE="${2:-}"; shift 2 ;;
     --check)  MODE=check; shift ;;
     --dry-run) MODE=dryrun; shift ;;
     --uninstall) MODE=uninstall; shift ;;
@@ -80,6 +84,12 @@ if [ -n "$OUT" ]; then
   esac
   case "${OUT%/}/" in
     "$REPO"/*) echo "[print-install] ⚠️  --out 落在仓库工作树内（$OUT）——PDF 会进版本控制，通常不该这样" >&2 ;;
+  esac
+fi
+if [ -n "$ARCHIVE" ]; then
+  case "$ARCHIVE" in
+    /*) ;;
+    *) echo "[print-install] ❌ --archive 需要绝对路径：$ARCHIVE" >&2; exit 1 ;;
   esac
 fi
 PAYLOAD_DIR="$REPO/tools/entry-doc"
@@ -121,6 +131,9 @@ if [ "$MODE" = check ]; then
     fi
   done
   # 产出位置：本次带了 --out 就必须写进钩子，否则 PDF 会落回 <仓库>/.git/ 里
+  if [ -n "$ARCHIVE" ] && ! grep -qF -- "--archive \"$ARCHIVE\"" "$HOOK"; then
+    echo "[print-install] ❌ 钩子里的归档目录与本次 --archive 不一致（预期 $ARCHIVE）" >&2; rc=1
+  fi
   if [ -n "$OUT" ]; then
     if ! grep -qF -- "--out \"$OUT\"" "$HOOK"; then
       echo "[print-install] ❌ 钩子里的产出目录与本次 --out 不一致（预期 $OUT）" >&2; rc=1
@@ -143,9 +156,10 @@ if [ "$MODE" = check ]; then
 fi
 
 # ── 组块内容 ──────────────────────────────────────────────────────────
-# 产出目录：给了 --out 就写死进钩子（钩子里少一个分支，就少一处能让彩蛋变哑的地方）
-OUT_ARG=""
-[ -n "$OUT" ] && OUT_ARG="--out \"$OUT\" "
+# 产出与归档目录：给了就写死进钩子（钩子里少一个分支，就少一处能让彩蛋变哑的地方）
+EP_ARGS=""
+[ -n "$OUT" ] && EP_ARGS="--out \"$OUT\" "
+[ -n "$ARCHIVE" ] && EP_ARGS="$EP_ARGS--archive \"$ARCHIVE\" "
 
 read -r -d '' BLOCK <<BLOCKEOF || true
 $MARK_BEGIN
@@ -167,7 +181,7 @@ $MARK_BEGIN
       done
     fi
     if [ "\$_ep_run" = 1 ]; then
-      ( cd "\$_ep_root" && bash "\$_ep_script" --quiet $OUT_ARG"\${_ep_docs[@]}" ) || true
+      ( cd "\$_ep_root" && bash "\$_ep_script" --quiet $EP_ARGS"\${_ep_docs[@]}" ) || true
     fi
   fi
 }
@@ -202,6 +216,7 @@ if [ "$MODE" = dryrun ]; then
   echo "[print-install] [dry-run] 将设置 core.hooksPath=.githooks"
   echo "[print-install] [dry-run] 文档清单：${DOCS:-（自动发现 AGENTS.md / AGENT.md）}"
   echo "[print-install] [dry-run] 产出目录：${OUT:-$REPO/.git/entry-doc-pdf}"
+  echo "[print-install] [dry-run] 归档目录：${ARCHIVE:-（无，退化为保留最近 10 份）}"
   exit 0
 fi
 
@@ -224,7 +239,9 @@ if [ -z "$SELF_SCRIPT" ]; then
   并报出「排版开销」＝实排页数 − 算术页数。它挂在 post-commit，永不阻断任何提交。
 - 依赖：无头浏览器（`CHROME_PATH` 或自动探测）；缺了就跳过并说明，不静默假装成功。
 - 产出：默认 `<仓库>/.git/entry-doc-pdf/`；安装时带 `--out <绝对目录>` 可把产出集中到仓库外
-  （多个仓库共用一个输出位时，按仓分子目录传）。不进版本控制，每个文档名滚动保留最近 10 份。
+  （多个仓库共用一个输出位时，按仓分子目录传）。
+- 产出位只留最新：带 `--archive <绝对目录>` 时，同一文档名的旧 PDF 自动移进归档目录，
+  产出位永远只有最新一份；不给 `--archive` 就退化为「每个文档名保留最近 10 份」。
 NOTICEEOF
 fi
 
@@ -261,6 +278,7 @@ else
 fi
 echo "[print-install]    钩子块：$HOOK（post-commit）"
 echo "[print-install]    文档清单：${DOCS:-自动发现 AGENTS.md / AGENT.md}"
-echo "[print-install]    产出目录：${OUT:-$REPO/.git/entry-doc-pdf}（每份名滚动保留最近 10 个）"
+echo "[print-install]    产出目录：${OUT:-$REPO/.git/entry-doc-pdf}"
+echo "[print-install]    归档目录：${ARCHIVE:-（无，则每份名滚动保留最近 10 个）}"
 echo "[print-install]    自检：bash $0 --repo $REPO --check"
 exit 0
