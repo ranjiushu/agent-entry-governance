@@ -13,7 +13,7 @@
 # 用法：
 #   bash install-print-hook.sh                          # 装到当前仓库，自动发现 AGENTS.md
 #   bash install-print-hook.sh --repo <路径>
-#   bash install-print-hook.sh --docs "SKILL.md entry-context-budget/SKILL.md"
+#   bash install-print-hook.sh --docs "SKILL.md entry-card-craft/SKILL.md"
 #                                                       # 显式声明要打印哪些文件（仓库内相对路径）
 #   bash install-print-hook.sh --script <仓库内相对路径>  # 自举模式：不复制本体，直接调仓库里那份
 #                                                       #   （本技能自己的仓库用它，避免同一文件两份）
@@ -163,7 +163,7 @@ EP_ARGS=""
 
 read -r -d '' BLOCK <<BLOCKEOF || true
 $MARK_BEGIN
-# 由 agent-entry-governance 技能（子技能 entry-context-budget）的 install-print-hook.sh 写入，
+# 由 agent-entry-governance 技能（子技能 entry-card-craft）的 install-print-hook.sh 写入，
 # **勿手改**；更新走上游重跑安装脚本（幂等）。
 # 这是**彩蛋层，不是门禁**：本块永不返回非零，渲染失败只留一行说明。
 {
@@ -229,10 +229,10 @@ if [ -z "$SELF_SCRIPT" ]; then
   cat > "$PAYLOAD_DIR/SOURCE.md" <<'NOTICEEOF'
 # tools/entry-doc —— 入口文档打印（分发副本，**可选层**）
 
-本目录由 agent-entry-governance 技能（子技能 `entry-context-budget`）的 `install-print-hook.sh` 写入，
+本目录由 agent-entry-governance 技能（子技能 `entry-card-craft`）的 `install-print-hook.sh` 写入，
 **请勿手改**：手改会在下次安装时被覆盖，并让仓库与上游漂移。
 
-- 上游：技能的 `entry-context-budget/scripts/`
+- 上游：技能的 `entry-card-craft/scripts/`
 - 更新：拿到新版技能目录后重跑 `install-print-hook.sh`（幂等，可反复执行）
 - 校验：`install-print-hook.sh --check`
 - 定位：**这不是门禁**。它把入口文档排成 A4 PDF、报页数（给人一个能感觉到的刻度），

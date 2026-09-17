@@ -21,26 +21,31 @@ AGENTS.md / CLAUDE.md 这类文件是代理每次开工时必读的内容。项�
 ## 组成
 
 ```
-SKILL.md                              聚合索引：关键词路由与成员分工
-entry-context-budget/
-├── SKILL.md                          策略：要什么（正面标准，不写环境专名）
-├── references/final-audit.md         交付前终审清单，只在终审阶段加载
-├── references/philosophy.md          设计理据：为什么这么定，按需加载
-├── references/style.md               文风正面标准：写文档与终审时对照
-└── scripts/
-    ├── measure.py                    度量器：只读，报告 token 与 gzip 密度
-    ├── guard.py                      判据：退出码 0 / 1 / 2，供关口 fail-closed 调用
-    ├── install-hook.sh               安装器：幂等把守卫装进 git 仓库的提交点
-    ├── print-entry-doc.sh            可选层：把入口文档排成 A4 PDF，报页数与排版开销
-    └── install-print-hook.sh         可选层安装器：幂等把打印挂到 post-commit（永不阻断提交）
+SKILL.md                              聚合索引：三条边界、分工秩序、关键词路由
+entry-deai-style/                     ① 去 AI 味（上游 humanizer-zh，内置降级四条）
+│   └── SKILL.md
+entry-card-craft/                     ② 简历式优化：以人为本的判决、排版、页面终审
+│   ├── SKILL.md
+│   ├── references/philosophy.md      设计理据：为什么这么定，按需加载
+│   ├── references/final-audit.md     终审清单（叙事 / 排版 / 文风 / 调性），终审时才读
+│   └── scripts/
+│       ├── print-entry-doc.sh        可选层：把入口文档排成 A4 PDF，报页数与排版开销
+│       └── install-print-hook.sh     可选层安装器：幂等把打印挂到 post-commit（永不阻断提交）
+entry-doc-governance/                 ③ 文档治理：度量、阈值、安全下沉、提交点守卫
+    ├── SKILL.md
+    ├── references/final-audit.md     终审清单（关口 / 事实源 / 度量 / 搬迁），终审时才读
+    └── scripts/
+        ├── measure.py                度量器：只读，报告 token 与 gzip 密度
+        ├── guard.py                  判据：退出码 0 / 1 / 2，供关口 fail-closed 调用
+        └── install-hook.sh           安装器：幂等把守卫装进 git 仓库的提交点
 ```
 
-技能靠三层渐进披露：`SKILL.md` 的 frontmatter 决定框架何时加载它，正文是策略与工作流，`references/` 按需加载——`final-audit.md` 只在交付前终审时读，`philosophy.md` 在需要解释或修改判据时读，`style.md` 在写文档与终审文风时读。
+技能靠三层渐进披露：`SKILL.md` 的 frontmatter 决定框架何时加载它，正文是策略与工作流，`references/` 按需加载——`final-audit.md` 只在交付前终审时读，`philosophy.md` 在需要解释或修改判据时读。
 
 阈值和 token 近似算法的唯一事实源是度量器，随时可查：
 
 ```
-python3 entry-context-budget/scripts/measure.py --print-policy
+python3 entry-doc-governance/scripts/measure.py --print-policy
 ```
 
 ## 怎么用
@@ -50,19 +55,19 @@ python3 entry-context-budget/scripts/measure.py --print-policy
 量一次当前入口文档：
 
 ```
-python3 entry-context-budget/scripts/measure.py AGENTS.md
+python3 entry-doc-governance/scripts/measure.py AGENTS.md
 ```
 
 装到提交点（幂等，可反复执行；守卫本体随仓库入库，clone 后仍有效）：
 
 ```
-bash entry-context-budget/scripts/install-hook.sh --repo /path/to/repo
+bash entry-doc-governance/scripts/install-hook.sh --repo /path/to/repo
 ```
 
 校验安装状态：
 
 ```
-bash entry-context-budget/scripts/install-hook.sh --repo /path/to/repo --check
+bash entry-doc-governance/scripts/install-hook.sh --repo /path/to/repo --check
 ```
 
 参数细节看各脚本的 --help 和文件头，本文件不复述。

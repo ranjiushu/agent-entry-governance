@@ -3,13 +3,13 @@
 set -uo pipefail
 
 # >>> agent-entry-governance: entry-doc-print (start) >>>
-# 由 agent-entry-governance 技能（子技能 entry-context-budget）的 install-print-hook.sh 写入，
+# 由 agent-entry-governance 技能（子技能 entry-card-craft）的 install-print-hook.sh 写入，
 # **勿手改**；更新走上游重跑安装脚本（幂等）。
 # 这是**彩蛋层，不是门禁**：本块永不返回非零，渲染失败只留一行说明。
 {
   _ep_root="$(git rev-parse --show-toplevel 2>/dev/null)"
-  _ep_script="$_ep_root/entry-context-budget/scripts/print-entry-doc.sh"
-  _ep_docs=("SKILL.md" "entry-context-budget/SKILL.md" )
+  _ep_script="$_ep_root/entry-card-craft/scripts/print-entry-doc.sh"
+  _ep_docs=("SKILL.md" "entry-deai-style/SKILL.md" "entry-card-craft/SKILL.md" "entry-doc-governance/SKILL.md" )
   if [ -n "$_ep_root" ] && [ -f "$_ep_script" ]; then
     _ep_run=0
     if [ "${AGENT_DOC_PRINT_ALWAYS:-0}" = 1 ]; then

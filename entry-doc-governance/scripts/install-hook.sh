@@ -20,8 +20,8 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PAYLOAD=(measure.py guard.py)
 NOTICE="SOURCE.md"
-MARK_BEGIN="# >>> agent-entry-governance: entry-context-budget (start) >>>"
-MARK_END="# <<< agent-entry-governance: entry-context-budget (end) <<<"
+MARK_BEGIN="# >>> agent-entry-governance: entry-doc-governance (start) >>>"
+MARK_END="# <<< agent-entry-governance: entry-doc-governance (end) <<<"
 # 技能改名前装过的标记块；安装时自动迁移，避免叠成两块把守卫跑两遍
 LEGACY_MARKS=(
   "# >>> doc-governance: agents-md-budget (start) >>>|# <<< doc-governance: agents-md-budget (end) <<<"
@@ -101,7 +101,7 @@ fi
 # ── 组块内容 ──────────────────────────────────────────────────────────
 read -r -d '' BLOCK <<BLOCKEOF || true
 $MARK_BEGIN
-# 由 agent-entry-governance 技能（子技能 entry-context-budget）的 install-hook.sh 写入，**勿手改**；
+# 由 agent-entry-governance 技能（子技能 entry-doc-governance）的 install-hook.sh 写入，**勿手改**；
 # 更新走上游重跑安装脚本（幂等）。守卫本体：tools/guards/guard.py
 {
   _gd_root="\$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -162,10 +162,10 @@ done
 cat > "$GUARD_DIR/$NOTICE" <<'NOTICEEOF'
 # tools/guards —— 文档守卫（分发副本）
 
-本目录由 agent-entry-governance 技能（子技能 `entry-context-budget`）的 `install-hook.sh` 写入，**请勿手改**：
+本目录由 agent-entry-governance 技能（子技能 `entry-doc-governance`）的 `install-hook.sh` 写入，**请勿手改**：
 手改会在下次安装时被覆盖，并让仓库与上游漂移。
 
-- 上游：技能的 `entry-context-budget/scripts/`（canonical）
+- 上游：技能的 `entry-doc-governance/scripts/`（canonical）
 - 更新：拿到新版技能目录后重跑 `install-hook.sh`（幂等，可反复执行）
 - 校验：`install-hook.sh --check`（比对副本哈希 + 钩子块 + core.hooksPath）
 - 阈值与算法唯一事实源：本目录 `measure.py`（`python3 measure.py --print-policy`）
