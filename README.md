@@ -8,7 +8,12 @@
 
 repo-resume 是一个 Agent 技能：把 `AGENTS.md`、`CLAUDE.md` 这类入口文档写成仓库的简历。接手的人读它，agent 每次会话开头也整份读它，而且读得比人勤。项目长大以后简历膨胀成百科，每次开工得先重读一遍。
 
-它把入口文档拉回人能一口气读完的尺度，判据放在两处。页面：把文档真排成 A4，通读一遍，看几页、末页空不空。提交点：超限就拒绝提交，不等上下文被撑爆了才发现。
+**把它当简历来写：常驻的那份短到能一口气读完，超载就拦。** 判据落在两处：
+
+- 常驻上下文保持短，超出预算的知识下沉成指针。
+- 简历要给人读：排成 A4 通读一遍，再交付。
+- 超限在提交点拦下，fail-closed，不留侥幸。
+- 兼容 `AGENTS.md` / `CLAUDE.md` / `SKILL.md`，自定义命名用 `--names` 注入。
 
 ## 判决看页面
 
@@ -44,17 +49,12 @@ python3 entry-doc-governance/scripts/measure.py AGENTS.md
 python3 entry-doc-governance/scripts/measure.py --print-policy
 ```
 
-守卫装到提交点，超限 fail-closed；`--check` 校验安装状态：
+装到提交点（`--check` 校验安装状态）：
 
 ```bash
-bash entry-doc-governance/scripts/install-hook.sh --repo /path/to/repo
+bash entry-doc-governance/scripts/install-hook.sh --repo /path/to/repo      # 守卫，超限 fail-closed
 bash entry-doc-governance/scripts/install-hook.sh --repo /path/to/repo --check
-```
-
-打印层挂到提交点：
-
-```bash
-bash entry-card-craft/scripts/install-print-hook.sh --repo /path/to/repo
+bash entry-card-craft/scripts/install-print-hook.sh --repo /path/to/repo    # 打印层
 ```
 
 作为技能加载则不用记命令：把整个 `repo-resume/` 目录放进 skills 目录，框架读各份 `SKILL.md` 的 frontmatter 决定何时加载。参数细节看各脚本的 `--help` 和文件头。
@@ -63,16 +63,11 @@ bash entry-card-craft/scripts/install-print-hook.sh --repo /path/to/repo
 
 守卫和度量器读同一份策略，下面是真实输出。
 
-超上限的文件被拒绝提交，退出码 1：
+超上限的直接拒绝提交，合规的只报个数：
 
 ```
 [guard] ❌ AGENTS.md 工作区版 已达约 5869 token（上限 3000），拒绝提交
 [guard]    请先精简：指针化下沉 docs/，或归档历史内容（精简动作：指针化下沉 / 归档历史 / 职责切割 / 拆分）
-```
-
-合规的文件只报个数：
-
-```
 [guard] ✅ SKILL.md 工作区版约 780 token（距提醒线 1720）
 ```
 
@@ -137,6 +132,8 @@ entry-deai-style/SKILL.md           去 AI 味（上游 humanizer-zh，内置降
 | `entry-deai-style/SKILL.md` | 780 | 1 页 | 距提醒线 1720 |
 | `entry-card-craft/SKILL.md` | 2192 | 2 页 | 距提醒线 308 |
 | `entry-doc-governance/SKILL.md` | 2591 | 3 页 | 提醒线以上，距上限 409 |
+
+页数和 token 是两个尺度：**一页纸是给人的判据，token 预算是给机器的约束**，不必同时满足——下表里就有一份 3 页、且停在提醒线以上的。
 
 这份 README 不在受管清单里（被取用、不被注入），但它一样排过：实排 3 页，末页 91%。
 
