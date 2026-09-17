@@ -98,6 +98,13 @@ if [ "$MODE" = check ]; then
   if ! grep -qF "$(echo $DOCS | awk '{print $1}')" "$HOOK"; then
     echo "[print-install] ⚠️  钩子里的文档清单与本次 --docs 不一致" >&2; rc=1
   fi
+  # 声明了不存在的文档 = 配错。渲染器在 --quiet 下对这类情况保持沉默（不然每次提交都刷屏），
+  # 所以配错只能在这里抓出来——校验是唯一能发现它的地方。
+  for _d in $DOCS; do
+    if [ ! -e "$REPO/$_d" ]; then
+      echo "[print-install] ❌ 声明的文档不存在：$_d" >&2; rc=1
+    fi
+  done
   if [ ! -f "$RUNNER" ]; then
     echo "[print-install] ❌ 渲染器不在位：$RUNNER_REL（自举模式指向的那份可能被移走了）" >&2; rc=1
   elif [ -z "$SELF_SCRIPT" ] && ! cmp -s "$HERE/$PAYLOAD_SCRIPT" "$RUNNER"; then
@@ -134,7 +141,7 @@ $MARK_BEGIN
       done
     fi
     if [ "\$_ep_run" = 1 ]; then
-      ( cd "\$_ep_root" && bash "\$_ep_script" --quiet ) || true
+      ( cd "\$_ep_root" && bash "\$_ep_script" --quiet "\${_ep_docs[@]}" ) || true
     fi
   fi
 }

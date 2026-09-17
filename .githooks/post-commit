@@ -21,7 +21,7 @@ set -uo pipefail
       done
     fi
     if [ "$_ep_run" = 1 ]; then
-      ( cd "$_ep_root" && bash "$_ep_script" --quiet ) || true
+      ( cd "$_ep_root" && bash "$_ep_script" --quiet "${_ep_docs[@]}" ) || true
     fi
   fi
 }
