@@ -210,13 +210,18 @@ def render(lines):
 
 body = render(open(sys.argv[1], encoding="utf-8").read().split("\n"))
 
-# 页数绑定在这份 CSS 上：换字号/行距/边距，页数就变。所以「标准排版」必须写死在一处，
+# 页数绑定在这份 CSS 上：换字体/字号/行距/边距，页数就变。所以「标准排版」必须写死在一处，
 # 跟阈值同一个纪律——两种排版下的页数不是同一把尺子，不可互相比较。
+# 字体与 sandbox-gui/tools/md2pdf.py（工作区里对标 Typora 输出的那份）对齐：
+# 正文衬线（Georgia + Noto Serif CJK SC／思源宋体），标题黑体，代码等宽。
 doc = """<!doctype html><html><head><meta charset="utf-8"><style>
 @page { size: A4; margin: 22mm 20mm; }
-body { font-family: "Noto Sans CJK SC","Source Han Sans SC",system-ui,sans-serif;
-       font-size: 10.5pt; line-height: 1.6; color: #111; }
-h1,h2,h3,h4 { line-height: 1.3; margin: 1.1em 0 .45em; page-break-after: avoid; }
+body { font-family: Georgia,"Palatino Linotype","Book Antiqua",Palatino,
+                     "Noto Serif CJK SC","Source Han Serif SC","SimSun","STSong",serif;
+       font-size: 10.5pt; line-height: 1.7; color: #111; }
+h1,h2,h3,h4 { font-family: -apple-system,"Segoe UI","Noto Sans CJK SC","PingFang SC",
+                     Helvetica,Arial,sans-serif;
+              line-height: 1.3; margin: 1.1em 0 .45em; page-break-after: avoid; }
 h1 { font-size: 17pt; border-bottom: 1px solid #c9c9c9; padding-bottom: .25em; }
 h2 { font-size: 13.5pt; } h3 { font-size: 12pt; } h4 { font-size: 11pt; }
 p { margin: .45em 0; }
