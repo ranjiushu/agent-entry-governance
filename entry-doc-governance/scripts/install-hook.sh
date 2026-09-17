@@ -25,6 +25,7 @@ MARK_END="# <<< repo-resume: entry-doc-governance (end) <<<"
 # 技能改名前装过的标记块；安装时自动迁移，避免叠成两块把守卫跑两遍
 LEGACY_MARKS=(
   "# >>> doc-governance: agents-md-budget (start) >>>|# <<< doc-governance: agents-md-budget (end) <<<"
+  "# >>> agent-entry-governance: entry-context-budget (start) >>>|# <<< agent-entry-governance: entry-context-budget (end) <<<"
 )
 
 strip_block() {  # $1=钩子文件 $2=起始标记 $3=结束标记；块存在则整块删除
@@ -36,7 +37,7 @@ hook, mb, me = sys.argv[1:4]
 src = io.open(hook, encoding="utf-8").read()
 i, j = src.find(mb), src.find(me)
 if i != -1 and j != -1:
-    io.open(hook, "w", encoding="utf-8").write((src[:i] + src[j + len(me):]).strip("\n") + "\n")
+    io.open(hook, "w", encoding="utf-8", newline="\n").write((src[:i] + src[j + len(me):]).strip("\n") + "\n")
 PYEOF
 }
 
@@ -192,7 +193,7 @@ if i != -1 and j != -1:
     new = src[:i] + block + src[j + len(me):].lstrip("\n")
 else:
     new = src.rstrip("\n") + "\n\n" + block if src.strip() else block
-io.open(hook, "w", encoding="utf-8").write(new)
+io.open(hook, "w", encoding="utf-8", newline="\n").write(new)
 PYEOF
 chmod +x "$HOOK"
 

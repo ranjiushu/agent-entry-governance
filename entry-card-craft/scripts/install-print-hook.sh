@@ -42,7 +42,7 @@ hook, mb, me = sys.argv[1:4]
 src = io.open(hook, encoding="utf-8").read()
 i, j = src.find(mb), src.find(me)
 if i != -1 and j != -1:
-    io.open(hook, "w", encoding="utf-8").write((src[:i] + src[j + len(me):]).strip("\n") + "\n")
+    io.open(hook, "w", encoding="utf-8", newline="\n").write((src[:i] + src[j + len(me):]).strip("\n") + "\n")
 PYEOF
 }
 
@@ -259,7 +259,7 @@ if i != -1 and j != -1:
     new = src[:i] + block + src[j + len(me):].lstrip("\n")
 else:
     new = src.rstrip("\n") + "\n\n" + block if src.strip() else block
-io.open(hook, "w", encoding="utf-8").write(new)
+io.open(hook, "w", encoding="utf-8", newline="\n").write(new)
 PYEOF
 chmod +x "$HOOK"
 

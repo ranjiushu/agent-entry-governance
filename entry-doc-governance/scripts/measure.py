@@ -35,6 +35,38 @@ import subprocess
 import sys
 
 
+# ── 输出编码兜底（纯展示层，不参与任何判定）──────────────────────────
+# Windows 控制台编码常为 GBK(cp936)，而 Python 在 Windows 上 stdout 的默认
+# errors 是 surrogateescape：打印 ❌ / ⚠️ / ⏭️ 这类 GBK 外字符会直接抛
+# UnicodeEncodeError，**整份报告一起丢**（实测：文档越线时反而看不到结论）。
+# 对策：按「当前输出流能不能编码」把装饰符号降级为 ASCII，并给两个流装上
+# backslashreplace 兜底（覆盖 JSON 等其它输出路径）。UTF-8 终端下行为完全不变。
+_ASCII_FALLBACK = {
+    "✅": "[OK]", "⚠️": "[!] ", "⚠": "[!] ",
+    "❌": "[X] ", "⏭️": "[--]", "⏭": "[--]",
+}
+
+
+def safe_text(s, stream=None):
+    """把当前输出流编码不了的装饰符号降级为 ASCII；其余字符原样返回。"""
+    stream = stream if stream is not None else sys.stdout
+    try:
+        s.encode(getattr(stream, "encoding", None) or "ascii")
+        return s
+    except (UnicodeEncodeError, LookupError):
+        pass
+    for _k, _v in _ASCII_FALLBACK.items():
+        s = s.replace(_k, _v)
+    return s
+
+
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(errors="backslashreplace")
+    except (AttributeError, ValueError):
+        pass
+
+
 class _Parser(argparse.ArgumentParser):
     """argparse 默认以 rc=2 报用法错误；钳制为 1，与 docstring 的退出码约定一致，
     也避免调用方把「用法错误」误当 guard.py 的「2 = 仅提醒，放行」。"""
@@ -284,9 +316,9 @@ def main(argv=None):
         return 1
 
     if args.json:
-        print(json.dumps({"policy": policy, "files": rows}, ensure_ascii=False, indent=2))
+        print(safe_text(json.dumps({"policy": policy, "files": rows}, ensure_ascii=False, indent=2)))
     else:
-        print(render_table(rows))
+        print(safe_text(render_table(rows)))
         worst = [r for r in rows if r["level"] != "ok"]
         if worst:
             print()
