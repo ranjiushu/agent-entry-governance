@@ -6,7 +6,7 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](#运行环境)
 [![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#运行环境)
 
-`AGENTS.md`、`CLAUDE.md` 这类入口文档是仓库的简历。准备接手的人看它，agent 也看它，而且 agent 通常是第一读者：每次会话开头，这份文件被整份注入。项目长大以后简历膨胀成百科，开工前得先重读一遍。
+`AGENTS.md`、`CLAUDE.md` 这类入口文档是仓库的简历。要接手的人看它，agent 也看它，而 agent 通常是第一读者：每次会话开头这份文件被整份注入。项目长大以后简历膨胀成百科，开工前得先重读一遍。
 
 这个技能把入口文档按回一页纸的尺度，判据放在两处。页面：把文档真排成 A4，通读一遍，看几页、末页空不空。提交点：超限就拒绝提交，不等上下文被撑爆了才发现。
 
@@ -25,11 +25,11 @@ bash entry-card-craft/scripts/print-entry-doc.sh SKILL.md entry-*/SKILL.md
 📄 entry-doc-governance-SKILL-20260917-114430.pdf（工作区版）实排 3 页｜算术 1.9 页｜排版开销 +1.1 页
 ```
 
-这行结果里有三样东西。实排页数是给人看的刻度。算术页数与实排页数的差是**排版开销**，表格、短行、项目符号的留白都记在它头上。末页只剩一点点时脚本会自动紧排一次，真少一页才采用，产出标「末页合并」——简历不给人留一行空白页。
+这行结果里有两样东西。实排页数是给人看的刻度；算术页数的差是**排版开销**，表格、短行、项目符号的留白都记在它头上。末页只剩一点点时脚本会自动紧排一次，真少一页才采用，产出标「末页合并」。简历不给人留一行空白页。
 
 正文用衬线体（Georgia 加思源宋体，标题黑体），对标 Typora 的输出质量。产出默认落在仓库的 `.git/` 下，用 `--out`、`--archive` 指定集中位置。
 
-打印不阻断任何流程：单份要 1 到 2 秒，还依赖无头浏览器（设 `CHROME_PATH` 或自动探测），所以挂 post-commit，且永不返回非零。这不是说它次要。守卫管有没有失控，页面管读不读得下去，各管一件。缺浏览器时脚本会明说这次没排成，终审据此标注「未经页面终审」：判决缺了依据就得说出来，不能装作看过。
+打印不阻断流程：单份要 1 到 2 秒，还依赖无头浏览器（设 `CHROME_PATH` 或自动探测），所以挂 post-commit，永不返回非零。这不是说它次要：守卫管有没有失控，页面管读不读得下去。缺浏览器时脚本会明说这次没排成，终审据此标注「未经页面终审」，不装作看过。
 
 挂进提交点（幂等，可反复执行）：
 
@@ -37,29 +37,29 @@ bash entry-card-craft/scripts/print-entry-doc.sh SKILL.md entry-*/SKILL.md
 bash entry-card-craft/scripts/install-print-hook.sh --repo /path/to/repo
 ```
 
-## 装守卫
+## 装上
 
-```bash
-# 装到提交点，超限 fail-closed
-bash entry-doc-governance/scripts/install-hook.sh --repo /path/to/repo
-
-# 校验安装状态
-bash entry-doc-governance/scripts/install-hook.sh --repo /path/to/repo --check
-```
-
-量一次当前入口文档（只读，不阻断）：
+量一次，只读不阻断；阈值不抄进文档，问度量器要权威值：
 
 ```bash
 python3 entry-doc-governance/scripts/measure.py AGENTS.md
-```
-
-阈值不抄进文档，随时问度量器要权威值：
-
-```bash
 python3 entry-doc-governance/scripts/measure.py --print-policy
 ```
 
-作为技能加载：把整个 `repo-resume/` 目录放进 skills 目录即可。框架读各份 `SKILL.md` 的 frontmatter 决定何时加载，使用的人不用记命令。参数细节看各脚本的 `--help` 和文件头。
+守卫装到提交点，超限 fail-closed；`--check` 校验安装状态：
+
+```bash
+bash entry-doc-governance/scripts/install-hook.sh --repo /path/to/repo
+bash entry-doc-governance/scripts/install-hook.sh --repo /path/to/repo --check
+```
+
+打印层挂到提交点：
+
+```bash
+bash entry-card-craft/scripts/install-print-hook.sh --repo /path/to/repo
+```
+
+作为技能加载则不用记命令：把整个 `repo-resume/` 目录放进 skills 目录，框架读各份 `SKILL.md` 的 frontmatter 决定何时加载。参数细节看各脚本的 `--help` 和文件头。
 
 ## 越线会看到什么
 
@@ -86,11 +86,11 @@ python3 entry-doc-governance/scripts/measure.py --print-policy
 | 1 | 超上限、用法错误，或校验无法完成 | 拒绝 |
 | 2 | 只在提醒线以上 / gzip 冗余 | 放行，并打印告警 |
 
-`--staged` 量的是暂存区里的版本，也就是即将提交的那份。文件没进本次提交就显式跳过，不回退去量工作区版；暂存版与 HEAD 逐字节相同（本次没改它）也跳过，免得一个存量超限的文件把仓库里无关的提交全锁死。改了它就得合规。
+`--staged` 量的是即将提交的那份。文件没进本次提交就显式跳过，不回退去量工作区版；暂存版与 HEAD 逐字节相同（本次没改它）也跳过，免得一个存量超限的文件把仓库里无关的提交全锁死。改了它就得合规。
 
 ## 三条边界
 
-安全与不可逆约束（敏感资产、关键路径、fail-closed 关口）照原样写死，不因为追求好看就软化。事实、路径、命令、判断照准写，不为顺口变模糊。文档不能长到挤爆代理的默认上下文，超了就把细节搬走，不删真相。
+安全与不可逆约束（敏感资产、关键路径、fail-closed 关口）照原样写死，不因为追求好看就软化。事实、路径、命令、判断照准写，不为顺口变模糊。文档不能长到挤爆代理的默认上下文，超了把细节搬走，不删真相。
 
 ## 三个成员
 
@@ -146,16 +146,16 @@ entry-doc-governance/                 ③ 文档治理：度量、阈值、安�
 | `entry-card-craft/SKILL.md` | 2103 | 2 页 | 距提醒线 397 |
 | `entry-doc-governance/SKILL.md` | 2593 | 3 页 | 提醒线以上，距上限 407 |
 
-`entry-doc-governance` 的正文停在提醒线以上、上限以内，是有意留的。按本技能自己的代价结构，成员 `SKILL.md` 属于取用层，框架需要时才加载，每次注入的只有聚合层 frontmatter 那一段，所以判决看的是加载时机，不是一个孤立的数字。
+`entry-doc-governance` 停在提醒线以上、上限以内是有意留的：成员 `SKILL.md` 属于取用层，框架需要时才加载，每次注入的只有聚合层 frontmatter 那一段。判决看加载时机，不看孤立数字。
 
 ## 边界
 
-只管代理入口文档，以及安全下沉入口知识所需的文档关系，不管整个仓库的通用文档生命周期。打印层覆盖的是入口文档，不是任意 Markdown 的排版工具。
+只管代理入口文档，以及安全下沉入口知识所需的文档关系，不管整个仓库的通用文档生命周期。打印层服务的也是入口文档，不是通用 Markdown 排版工具。
 
 ## 运行环境
 
 - 度量器与判据（`entry-doc-governance`）：Python 3.8+ 标准库，不联网、不写文件、不依赖版本控制（版本控制只用于取将生效的版本）。
-- 打印层（`entry-card-craft`）：bash + Python 3.8+ 标准库，另需一个无头浏览器，用 `CHROME_PATH` 指定或自动探测；不阻断流程。
+- 打印层（`entry-card-craft`）：bash + Python 3.8+ 标准库，另需无头浏览器（`CHROME_PATH` 或自动探测）；不阻断流程。
 - 安装器：往 git 仓库的钩子位装东西，需要 git。
 - 去味（`entry-deai-style`）：依赖上游技能 `humanizer-zh`，缺席时用内置降级四条并显式声明。
 - 入口文档的命名和层数由所在环境声明。脚本默认发现 `AGENTS.md` / `AGENT.md`，其他命名用 `--names` 注入，不改源码。
@@ -164,19 +164,8 @@ entry-doc-governance/                 ③ 文档治理：度量、阈值、安�
 
 ## 可移植性
 
-可移植单元是整个目录。支持 Skills 的框架直接放进 skills 目录读 `SKILL.md`；不支持的框架把 `SKILL.md` 正文塞进系统提示词，脚本照常能单独跑。有版本控制就把守卫装到提交点；只有流水线或启动入口，就在其中 fail-closed 调用 `guard.py`；一个关口都没有，就退化为入口处的显式提示，不假装已经装上了。
+可移植单元是整个目录。支持 Skills 的框架直接放进 skills 目录读 `SKILL.md`；不支持的把 `SKILL.md` 正文塞进系统提示词，脚本照常能单独跑。守卫能装提交点就装；只有流水线或启动入口，就在其中 fail-closed 调用 `guard.py`；一个关口都没有，就退化为入口处的显式提示，不假装已经装上了。
 
-## 参与
+## 参与与许可
 
-issue 和 PR 都欢迎，中英文都行。改 `SKILL.md` 或脚本之后，提交前跑一次：
-
-```bash
-python3 entry-doc-governance/scripts/measure.py SKILL.md entry-*/SKILL.md
-bash entry-card-craft/scripts/print-entry-doc.sh SKILL.md entry-*/SKILL.md
-```
-
-本仓自己的守卫也会在提交点拦一道。
-
-## 许可
-
-MIT，见 [LICENSE](LICENSE)。
+issue 和 PR 都欢迎，中英文都行。改 `SKILL.md` 或脚本之后，提交前按上面的用法把 `measure.py` 与 `print-entry-doc.sh` 各跑一次。MIT 许可，见 [LICENSE](LICENSE)。
