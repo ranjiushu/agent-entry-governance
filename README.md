@@ -1,6 +1,6 @@
 # agent-entry-governance
 
-一个 Agent 技能（Skill）：控制 AGENTS.md / CLAUDE.md 这类 Agent 入口文档的长度和信息密度——设定上下文预算，超出的知识下沉成指针，并在提交点装守卫拦截超限内容。
+一个 Agent 技能（Skill）：把 `AGENTS.md` / `CLAUDE.md` 这类入口文档做成**简洁、美观、优雅的人机协同卡片**——人靠它接手项目，Agent 靠它开局。做法是设定上下文预算、把过量知识下沉成指针、在提交点装守卫拦截超限；两条边界贯穿始终：不牺牲文档的功能与精度，不挤爆 Agent 的默认上下文。
 
 把整个目录放进 Agent 框架的 skills 目录即可生效；框架读 `SKILL.md` 的 frontmatter 判断何时调用它。
 

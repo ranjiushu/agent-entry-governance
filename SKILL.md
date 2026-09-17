@@ -5,7 +5,7 @@ description: 控制 AGENTS.md / CLAUDE.md 这类 Agent 入口文档的长度和�
 
 # agent-entry-governance（Agent 入口文档治理 · 技能聚合）
 
-让入口文档写不烂：不无限膨胀、不腐烂成过时副本、不出现第二处事实源。
+让入口文档成为简洁、美观、优雅的人机协同卡片——同时对机器友好：不无限膨胀（不挤爆上下文）、不腐烂成过时副本、不出现第二处事实源、不为了好看牺牲精度。
 与分支交付类技能的分工：那个管「分支怎么交付」，本技能管「入口文档怎么不烂」，不重叠。
 
 组织原则：聚合层只做索引与分工，不复制成员内容；成员只做策略（不变量）加机制（可替换实现），策略层不写环境专名。
@@ -19,6 +19,9 @@ description: 控制 AGENTS.md / CLAUDE.md 这类 Agent 入口文档的长度和�
 | 文档太杂、想拆 | entry-context-budget（精简动作 · 拆分） |
 | 给仓库装文档门禁（关键路径上的关口） | entry-context-budget（安装器） |
 | 把门禁搬到别的框架 / 别的运行环境 | entry-context-budget（可移植性） |
+| 卡片读起来累 / 不好看 / 想做得优雅 | entry-context-budget（§〇 以人为本） |
+| 怕精简改坏精度、改出事实错误 | entry-context-budget（§〇 两条边界） |
+| 拿不准写得好不好，想看成品 | entry-context-budget（人类刻度 · 实排页面） |
 
 ## 二、成员
 
