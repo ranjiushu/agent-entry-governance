@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# 由 agent-entry-governance 技能 create 的钩子（原先无 post-commit）
+set -uo pipefail
+
+# >>> agent-entry-governance: entry-doc-print (start) >>>
+# 由 agent-entry-governance 技能（子技能 entry-context-budget）的 install-print-hook.sh 写入，
+# **勿手改**；更新走上游重跑安装脚本（幂等）。
+# 这是**彩蛋层，不是门禁**：本块永不返回非零，渲染失败只留一行说明。
+{
+  _ep_root="$(git rev-parse --show-toplevel 2>/dev/null)"
+  _ep_script="$_ep_root/entry-context-budget/scripts/print-entry-doc.sh"
+  _ep_docs=("SKILL.md" "entry-context-budget/SKILL.md" )
+  if [ -n "$_ep_root" ] && [ -f "$_ep_script" ]; then
+    _ep_run=0
+    if [ "${AGENT_DOC_PRINT_ALWAYS:-0}" = 1 ]; then
+      _ep_run=1
+    else
+      _ep_changed="$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null)"
+      for _ep_d in "${_ep_docs[@]}"; do
+        if printf '%s\n' "$_ep_changed" | grep -qxF "$_ep_d"; then _ep_run=1; break; fi
+      done
+    fi
+    if [ "$_ep_run" = 1 ]; then
+      ( cd "$_ep_root" && bash "$_ep_script" --quiet ) || true
+    fi
+  fi
+}
+# <<< agent-entry-governance: entry-doc-print (end) <<<

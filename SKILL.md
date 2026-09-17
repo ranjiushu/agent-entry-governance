@@ -34,6 +34,7 @@ description: 控制 AGENTS.md / CLAUDE.md 这类 Agent 入口文档的长度和�
 
 - 度量器与判据（measure.py / guard.py）：纯标准库，无第三方依赖、不联网、不读环境变量、不依赖版本控制（版本控制只是取将生效版本的增强；有 git 时 guard.py --staged 会用它取暂存版与存量基线）。
 - 安装器（install-hook.sh）是例外：它把守卫装进 git 仓库，依赖 git、写文件、幂等，上述两条不适用于它。
+- 渲染与它的安装器（print-entry-doc.sh / install-print-hook.sh）同属例外，且是**可选层**：依赖无头浏览器，不进判据、不阻断任何流程，缺依赖就显式跳过并说明。
 
 前提缺失时必须显式响应，不得静默降级。
 

@@ -23,7 +23,9 @@ AGENTS.md / CLAUDE.md 这类文件是代理每次开工时必读的内容。项�
     └── scripts/
         ├── measure.py                    度量器：只读，报告 token 与 gzip 密度
         ├── guard.py                      判据：退出码 0 / 1 / 2，供关口 fail-closed 调用
-        └── install-hook.sh               安装器：幂等把守卫装进 git 仓库的提交点
+        ├── install-hook.sh               安装器：幂等把守卫装进 git 仓库的提交点
+        ├── print-entry-doc.sh            可选层：把入口文档排成 A4 PDF，报页数与排版开销
+        └── install-print-hook.sh         可选层安装器：幂等把打印挂到 post-commit（永不阻断提交）
 
 技能靠三层渐进披露：`SKILL.md` 的 frontmatter 决定框架何时加载它，正文是策略与工作流，`references/` 只在交付前终审时读。
 
