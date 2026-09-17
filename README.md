@@ -6,9 +6,9 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](#运行环境)
 [![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#运行环境)
 
-`AGENTS.md`、`CLAUDE.md` 这类入口文档是仓库的简历。要接手的人看它，agent 也看它，而 agent 通常是第一读者：每次会话开头这份文件被整份注入。项目长大以后简历膨胀成百科，开工前得先重读一遍。
+repo-resume 是一个 Agent 技能：把 `AGENTS.md`、`CLAUDE.md` 这类入口文档写成仓库的简历。接手的人读它，agent 每次会话开头也整份读它，而且读得比人勤。项目长大以后简历膨胀成百科，每次开工得先重读一遍。
 
-这个技能把入口文档按回一页纸的尺度，判据放在两处。页面：把文档真排成 A4，通读一遍，看几页、末页空不空。提交点：超限就拒绝提交，不等上下文被撑爆了才发现。
+它把入口文档拉回人能一口气读完的尺度，判据放在两处。页面：把文档真排成 A4，通读一遍，看几页、末页空不空。提交点：超限就拒绝提交，不等上下文被撑爆了才发现。
 
 ## 判决看页面
 
@@ -16,7 +16,7 @@
 
 ### 为什么多这一步
 
-Markdown 本来就能读，再排一遍看着多余。理由是：人感觉不到 token 和字节，感觉到的是页数、空白、和被折断的表格——编辑器里一行超长的表格只是一坨，排到页面上才看得出它散架了。排一遍买的是「通读」这个动作：人读得进去，才会读、才会改、才会把自己的判断放进来；没人维护的入口文档会烂掉，Agent 开工拿到的上下文跟着一起错。代价是 1–2 秒加一次浏览器渲染，换不来内容，也管不了机器侧的预算（那是守卫的事）。理由写全在 [entry-card-craft/references/philosophy.md](entry-card-craft/references/philosophy.md)。
+Markdown 本来就能读，再排一遍看着多余。理由是页面比源码诚实：编辑器里一行超长的表格只是一坨，排到页面上才看得出它散架。多排这一遍，买的是「通读」这个动作：人读得进去，才会读、才会改、才会把自己的判断放进来；没人维护的入口文档会烂掉，Agent 开工拿到的上下文跟着一起错。代价是 1–2 秒加一次浏览器渲染，换不来内容，也管不了机器侧的预算（那是守卫的事）。理由写全在 [entry-card-craft/references/philosophy.md](entry-card-craft/references/philosophy.md)。
 
 ```bash
 bash entry-card-craft/scripts/print-entry-doc.sh SKILL.md entry-*/SKILL.md
@@ -33,15 +33,9 @@ bash entry-card-craft/scripts/print-entry-doc.sh SKILL.md entry-*/SKILL.md
 
 正文用衬线体（Georgia 加思源宋体，标题黑体），对标 Typora 的输出质量。产出默认落在仓库的 `.git/` 下，用 `--out`、`--archive` 指定集中位置。
 
-打印不阻断流程：单份要 1 到 2 秒，还依赖无头浏览器（设 `CHROME_PATH` 或自动探测），所以挂 post-commit，永不返回非零。这不是说它次要：守卫管有没有失控，页面管读不读得下去。缺浏览器时脚本会明说这次没排成，终审据此标注「未经页面终审」，不装作看过。
+打印不阻断流程：单份要 1 到 2 秒，还依赖无头浏览器（设 `CHROME_PATH` 或自动探测），所以挂 post-commit，永不返回非零。这不是说它次要：**守卫管有没有失控，页面管读不读得下去。**缺浏览器时脚本会明说这次没排成，终审据此标注「未经页面终审」，不装作看过。
 
-挂进提交点（幂等，可反复执行）：
-
-```bash
-bash entry-card-craft/scripts/install-print-hook.sh --repo /path/to/repo
-```
-
-## 装上
+## 快速开始
 
 量一次，只读不阻断；阈值不抄进文档，问度量器要权威值：
 
@@ -90,7 +84,7 @@ bash entry-card-craft/scripts/install-print-hook.sh --repo /path/to/repo
 | 1 | 超上限、用法错误，或校验无法完成 | 拒绝 |
 | 2 | 只在提醒线以上 / gzip 冗余 | 放行，并打印告警 |
 
-`--staged` 量的是即将提交的那份。文件没进本次提交就显式跳过，不回退去量工作区版；暂存版与 HEAD 逐字节相同（本次没改它）也跳过，免得一个存量超限的文件把仓库里无关的提交全锁死。改了它就得合规。
+`--staged` 量的是即将提交的那份：没进本次提交就显式跳过，与 HEAD 逐字节相同（本次没改它）也跳过，免得一个存量超限的文件把仓库里无关的提交全锁死。
 
 ## 三条边界
 
@@ -110,19 +104,19 @@ bash entry-card-craft/scripts/install-print-hook.sh --repo /path/to/repo
 
 ```
 SKILL.md                            聚合索引：三条边界、分工秩序、关键词路由
-entry-deai-style/SKILL.md           ① 去 AI 味（上游 humanizer-zh，内置降级四条）
-entry-card-craft/                   ② 简历本身：判决、排版、打印、页面终审
+entry-card-craft/                   简历本身：判决、排版、打印、页面终审
 ├── SKILL.md
 ├── references/philosophy.md        设计理据：核心假设与判据的理由，按需加载
 ├── references/final-audit.md       终审清单（叙事 / 排版 / 文风 / 调性），终审时才读
 └── scripts/{print-entry-doc.sh, install-print-hook.sh}    打印层与它的安装器
-entry-doc-governance/               ③ 文档治理：度量、阈值、安全下沉、提交点守卫
+entry-doc-governance/               文档治理：度量、阈值、安全下沉、提交点守卫
 ├── SKILL.md
 ├── references/final-audit.md       终审清单（关口 / 事实源 / 度量 / 搬迁），终审时才读
 └── scripts/{measure.py, guard.py, install-hook.sh}        度量器 / 判据 / 安装器
+entry-deai-style/SKILL.md           去 AI 味（上游 humanizer-zh，内置降级四条）
 ```
 
-技能按三层渐进披露：frontmatter 决定框架何时加载，正文放策略与工作流，`references/` 按需加载。
+技能按三层渐进披露：frontmatter 决定框架何时加载，正文是策略与工作流，`references/` 按需加载。
 
 ## 工作流
 
@@ -144,9 +138,11 @@ entry-doc-governance/               ③ 文档治理：度量、阈值、安全�
 | `entry-card-craft/SKILL.md` | 2192 | 2 页 | 距提醒线 308 |
 | `entry-doc-governance/SKILL.md` | 2591 | 3 页 | 提醒线以上，距上限 409 |
 
+这份 README 不在受管清单里（被取用、不被注入），但它一样排过：实排 3 页，末页 91%。
+
 `entry-doc-governance` 停在提醒线以上、上限以内是有意留的：成员 `SKILL.md` 属于取用层，框架需要时才加载，每次注入的只有聚合层 frontmatter 那一段。判决看加载时机，不看孤立数字。
 
-## 边界
+## 适用范围
 
 只管代理入口文档，以及安全下沉入口知识所需的文档关系，不管整个仓库的通用文档生命周期。打印层服务的也是入口文档，不是通用 Markdown 排版工具。
 
@@ -166,4 +162,4 @@ entry-doc-governance/               ③ 文档治理：度量、阈值、安全�
 
 ## 参与与许可
 
-issue 和 PR 都欢迎，中英文都行。改 `SKILL.md` 或脚本之后，提交前按上面的用法把 `measure.py` 与 `print-entry-doc.sh` 各跑一次。MIT 许可，见 [LICENSE](LICENSE)。
+issue 和 PR 都欢迎，中英文都行。改 `SKILL.md` 或脚本之后，提交前照「快速开始」里的两条命令各跑一次；守卫会在提交点再拦一道。MIT 许可，见 [LICENSE](LICENSE)。
