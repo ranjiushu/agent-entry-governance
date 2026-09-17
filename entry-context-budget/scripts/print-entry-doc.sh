@@ -161,11 +161,15 @@ render_one() {
   abs="$(cd "$(dirname "$target")" 2>/dev/null && pwd)/$(basename "$target")"
   [ -e "$abs" ] || { say "$target 不存在，跳过"; return 0; }
 
+  # 仓库内相对路径：既用于取暂存版，也用于给产出文件命名
+  # （一个仓库里常有多份同名入口文档，如两个 SKILL.md，只按 basename 命名会撞车）
+  root="$(git -C "$(dirname "$abs")" rev-parse --show-toplevel 2>/dev/null)"
+  rel=""
+  [ -n "$root" ] && rel="$(python3 -c 'import os,sys; print(os.path.relpath(sys.argv[1],sys.argv[2]))' "$abs" "$root" 2>/dev/null)"
+
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/entry-doc.XXXXXX")"
   if [ "$STAGED" = 1 ]; then
-    root="$(git -C "$(dirname "$abs")" rev-parse --show-toplevel 2>/dev/null)"
     if [ -n "$root" ]; then
-      rel="$(python3 -c 'import os,sys; print(os.path.relpath(sys.argv[1],sys.argv[2]))' "$abs" "$root" 2>/dev/null)"
       if git -C "$root" show ":$rel" > "$tmp/doc.md" 2>/dev/null; then
         note="暂存版"
       else
@@ -182,7 +186,6 @@ render_one() {
   md2html "$tmp/doc.md" "$tmp/doc.html"
   if [ ! -s "$tmp/doc.html" ]; then rm -rf "$tmp"; say "$target HTML 生成失败，跳过"; return 0; fi
 
-  root="$(git -C "$(dirname "$abs")" rev-parse --show-toplevel 2>/dev/null)"
   if [ -n "$OUT_DIR" ]; then
     dest="$OUT_DIR"
   elif [ -n "$root" ] && [ -d "$root/.git" ]; then
