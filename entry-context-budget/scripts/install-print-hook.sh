@@ -17,6 +17,8 @@
 #                                                       # 显式声明要打印哪些文件（仓库内相对路径）
 #   bash install-print-hook.sh --script <仓库内相对路径>  # 自举模式：不复制本体，直接调仓库里那份
 #                                                       #   （本技能自己的仓库用它，避免同一文件两份）
+#   bash install-print-hook.sh --out <绝对目录>          # 产出集中到指定目录（默认 <仓库>/.git/entry-doc-pdf/）
+#                                                       #   多个仓库共用一个输出位时，按仓分子目录传入即可
 #   bash install-print-hook.sh --check | --dry-run | --uninstall
 #
 # 跳过规则：本次提交**没碰**声明的入口文档时自动跳过（存量豁免）；
@@ -46,11 +48,13 @@ MODE=install
 REPO=""
 DOCS=""
 SELF_SCRIPT=""
+OUT=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --repo)   REPO="${2:-}"; shift 2 ;;
     --docs)   DOCS="${2:-}"; shift 2 ;;
     --script) SELF_SCRIPT="${2:-}"; shift 2 ;;
+    --out)    OUT="${2:-}"; shift 2 ;;
     --check)  MODE=check; shift ;;
     --dry-run) MODE=dryrun; shift ;;
     --uninstall) MODE=uninstall; shift ;;
@@ -67,6 +71,17 @@ if [ -z "$REPO" ] || ! git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1; then
 fi
 REPO="$(cd "$REPO" && pwd)"
 HOOK="$REPO/.githooks/post-commit"
+
+# --out 必须是绝对路径：钩子会 cd 到仓库根再调用，相对路径会漂
+if [ -n "$OUT" ]; then
+  case "$OUT" in
+    /*) ;;
+    *) echo "[print-install] ❌ --out 需要绝对路径：$OUT" >&2; exit 1 ;;
+  esac
+  case "${OUT%/}/" in
+    "$REPO"/*) echo "[print-install] ⚠️  --out 落在仓库工作树内（$OUT）——PDF 会进版本控制，通常不该这样" >&2 ;;
+  esac
+fi
 PAYLOAD_DIR="$REPO/tools/entry-doc"
 
 # 自举模式：钩子直接调仓库内那份（本技能自己的仓库用）
@@ -105,6 +120,13 @@ if [ "$MODE" = check ]; then
       echo "[print-install] ❌ 声明的文档不存在：$_d" >&2; rc=1
     fi
   done
+  # 产出位置：本次带了 --out 就必须写进钩子，否则 PDF 会落回 <仓库>/.git/ 里
+  if [ -n "$OUT" ]; then
+    if ! grep -qF -- "--out \"$OUT\"" "$HOOK"; then
+      echo "[print-install] ❌ 钩子里的产出目录与本次 --out 不一致（预期 $OUT）" >&2; rc=1
+    fi
+    [ -d "$OUT" ] || echo "[print-install] ⚠️  产出目录尚不存在（首次渲染自建）：$OUT" >&2
+  fi
   if [ ! -f "$RUNNER" ]; then
     echo "[print-install] ❌ 渲染器不在位：$RUNNER_REL（自举模式指向的那份可能被移走了）" >&2; rc=1
   elif [ -z "$SELF_SCRIPT" ] && ! cmp -s "$HERE/$PAYLOAD_SCRIPT" "$RUNNER"; then
@@ -121,6 +143,10 @@ if [ "$MODE" = check ]; then
 fi
 
 # ── 组块内容 ──────────────────────────────────────────────────────────
+# 产出目录：给了 --out 就写死进钩子（钩子里少一个分支，就少一处能让彩蛋变哑的地方）
+OUT_ARG=""
+[ -n "$OUT" ] && OUT_ARG="--out \"$OUT\" "
+
 read -r -d '' BLOCK <<BLOCKEOF || true
 $MARK_BEGIN
 # 由 agent-entry-governance 技能（子技能 entry-context-budget）的 install-print-hook.sh 写入，
@@ -141,7 +167,7 @@ $MARK_BEGIN
       done
     fi
     if [ "\$_ep_run" = 1 ]; then
-      ( cd "\$_ep_root" && bash "\$_ep_script" --quiet "\${_ep_docs[@]}" ) || true
+      ( cd "\$_ep_root" && bash "\$_ep_script" --quiet $OUT_ARG"\${_ep_docs[@]}" ) || true
     fi
   fi
 }
@@ -175,6 +201,7 @@ if [ "$MODE" = dryrun ]; then
   echo "[print-install] [dry-run] 将在 $HOOK 写入/替换标记块"
   echo "[print-install] [dry-run] 将设置 core.hooksPath=.githooks"
   echo "[print-install] [dry-run] 文档清单：${DOCS:-（自动发现 AGENTS.md / AGENT.md）}"
+  echo "[print-install] [dry-run] 产出目录：${OUT:-$REPO/.git/entry-doc-pdf}"
   exit 0
 fi
 
@@ -196,7 +223,8 @@ if [ -z "$SELF_SCRIPT" ]; then
 - 定位：**这不是门禁**。它把入口文档排成 A4 PDF、报页数（给人一个能感觉到的刻度），
   并报出「排版开销」＝实排页数 − 算术页数。它挂在 post-commit，永不阻断任何提交。
 - 依赖：无头浏览器（`CHROME_PATH` 或自动探测）；缺了就跳过并说明，不静默假装成功。
-- 产出：`<仓库>/.git/entry-doc-pdf/`（不进版本控制），每个文档名滚动保留最近 10 份。
+- 产出：默认 `<仓库>/.git/entry-doc-pdf/`；安装时带 `--out <绝对目录>` 可把产出集中到仓库外
+  （多个仓库共用一个输出位时，按仓分子目录传）。不进版本控制，每个文档名滚动保留最近 10 份。
 NOTICEEOF
 fi
 
@@ -233,5 +261,6 @@ else
 fi
 echo "[print-install]    钩子块：$HOOK（post-commit）"
 echo "[print-install]    文档清单：${DOCS:-自动发现 AGENTS.md / AGENT.md}"
+echo "[print-install]    产出目录：${OUT:-$REPO/.git/entry-doc-pdf}（每份名滚动保留最近 10 个）"
 echo "[print-install]    自检：bash $0 --repo $REPO --check"
 exit 0
