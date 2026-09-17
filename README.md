@@ -1,6 +1,6 @@
 # agent-entry-governance
 
-一个 Agent 技能（Skill）：把 `AGENTS.md` / `CLAUDE.md` 这类入口文档写成项目／工作区的**「简历」**——简洁、美观、优雅，让不认识这个项目的人（Agent 通常是它的第一读者）几分钟内看明白这是什么地方、有什么规矩、细节去哪儿找。做法是设定上下文预算、把过量知识下沉成指针、在提交点装守卫拦截超限；两条边界贯穿始终：不牺牲文档的功能与精度，不挤爆 Agent 的默认上下文。
+一个 Agent 技能（Skill）：把 `AGENTS.md` / `CLAUDE.md` 这类入口文档写成项目／工作区的**「简历」**——简洁、美观、优雅，让不认识这个项目的人（Agent 通常是它的第一读者）几分钟内看明白这是什么地方、有什么规矩、细节去哪儿找。三个成员分工：`entry-deai-style` 去 AI 味、`entry-card-craft` 做简历式优化、`entry-doc-governance` 管体积与安全下沉。三条边界贯穿始终：安全与不可逆约束、精度、上下文，都不为了好看让步。
 
 把整个目录放进 Agent 框架的 skills 目录即可生效；框架读 `SKILL.md` 的 frontmatter 判断何时调用它。
 
@@ -86,8 +86,10 @@ bash entry-doc-governance/scripts/install-hook.sh --repo /path/to/repo --check
 
 ## 运行环境
 
-- 度量器与判据：Python 3.8+ 标准库，不联网、不写文件、不依赖版本控制（版本控制仅用于取将生效的版本）。
+- 度量器与判据（`entry-doc-governance`）：Python 3.8+ 标准库，不联网、不写文件、不依赖版本控制（版本控制仅用于取将生效的版本）。
 - 安装器：往 git 仓库的提交点装守卫，需要 git。
+- 渲染层（`entry-card-craft`）是可选层：依赖无头浏览器，不进判据、不阻断流程，缺依赖就显式跳过并说明。
+- 去味（`entry-deai-style`）依赖上游技能 humanizer-zh；缺席时用内置降级四条并显式声明。
 - 入口文档的命名和层数由所在环境声明。脚本默认发现 AGENTS.md / AGENT.md，其他命名用 `--names` 注入，不改源码。
 
 ## 可移植性
