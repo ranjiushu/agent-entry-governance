@@ -17,6 +17,12 @@
 #                                               #   不给 --archive 时退化为「保留最近 KEEP 份」
 #   print-entry-doc.sh --quiet                  # 只报结果行（适合挂进钩子）
 #
+# 排版档（两档，页数以标准档为准）
+#   std（默认）：标准排版；一切页数按它计，页数间可比。
+#   fit（末页合并）：自动启用，不需要手动指定。标准排版下末页只剩一点点时，
+#       用 fit 档（收紧边距/字号/行距，多容纳约三成）再排一次，**真少一页**才采用。
+#       专治「第二页只有一行」——简历不给人留一行空白页。产出行的档位标注为「末页合并」。
+#
 # 退出码
 #   0 = 完成。**包括「没排成」的所有情况**（缺浏览器 / 超时 / 渲染失败）——
 #       这类情况只打印一行说明，绝不阻断调用方（挂进 post-commit 不会卡任何东西）。
@@ -90,8 +96,8 @@ CHROME="$(find_chrome)" || {
 #   ① 表格必须渲染成 <table>（不是等宽 pre）——pre 是引用/代码的外观，表格会因此"看起来无法渲染"；
 #   ② 引用块整体合并后**递归**渲染内部 —— 于是引用里嵌表格、嵌列表都能正常出；
 #   ③ 列表项必须有 <ul>/<ol> 包裹 —— 否则项目符号不显示，列表塌成一段段文字。
-md2html() {  # $1=md $2=html
-  python3 - "$1" "$2" <<'PY'
+md2html() {  # $1=md $2=html $3=排版档（std|fit）
+  python3 - "$1" "$2" "${3:-std}" <<'PY'
 import html, re, sys
 
 QUOTE = re.compile(r"^\s*>\s?")
@@ -214,35 +220,70 @@ body = render(open(sys.argv[1], encoding="utf-8").read().split("\n"))
 # 跟阈值同一个纪律——两种排版下的页数不是同一把尺子，不可互相比较。
 # 字体与 sandbox-gui/tools/md2pdf.py（工作区里对标 Typora 输出的那份）对齐：
 # 正文衬线（Georgia + Noto Serif CJK SC／思源宋体），标题黑体，代码等宽。
-doc = """<!doctype html><html><head><meta charset="utf-8"><style>
-@page { size: A4; margin: 22mm 20mm; }
+#
+# 两档排版，只有两个用途：
+#   std（默认，标准排版）：一切页数以此为准，页数间可比。
+#   fit（末页合并）：仅当标准排版下**末页只剩很少内容**（收一收就能进前一页）时启用，
+#       专治「第二页只有一行」——简历不给人留一行空白页。fit 收紧边距/字号/行距（多容纳
+#       约三成，收益即末页那点内容的去向）；吞不下就说明该改内容，不该再压格式。
+#       产出行会标出用的哪档；fit 只在「页数真少一页」时才采用。
+tier = sys.argv[3] if len(sys.argv) > 3 else "std"
+if tier == "fit":
+    V = dict(margin="16mm 17mm", fs="9.8pt", lh="1.42", pm=".28em", lim=".09em",
+             ulm=".18em 0 .28em 1.15em", hm=".75em 0 .3em", tbl="9.2pt", pre="8.4pt",
+             bqm=".35em 0")
+else:
+    V = dict(margin="22mm 20mm", fs="10.5pt", lh="1.7", pm=".45em", lim=".16em",
+             ulm=".3em 0 .4em 1.25em", hm="1.1em 0 .45em", tbl="10pt", pre="9pt",
+             bqm=".5em 0")
+
+css = """@page { size: A4; margin: @@MARGIN@@; }
 body { font-family: Georgia,"Palatino Linotype","Book Antiqua",Palatino,
                      "Noto Serif CJK SC","Source Han Serif SC","SimSun","STSong",serif;
-       font-size: 10.5pt; line-height: 1.7; color: #111; }
+       font-size: @@FS@@; line-height: @@LH@@; color: #111; }
 h1,h2,h3,h4 { font-family: -apple-system,"Segoe UI","Noto Sans CJK SC","PingFang SC",
                      Helvetica,Arial,sans-serif;
-              line-height: 1.3; margin: 1.1em 0 .45em; page-break-after: avoid; }
+              line-height: 1.3; margin: @@HM@@; page-break-after: avoid; }
 h1 { font-size: 17pt; border-bottom: 1px solid #c9c9c9; padding-bottom: .25em; }
 h2 { font-size: 13.5pt; } h3 { font-size: 12pt; } h4 { font-size: 11pt; }
-p { margin: .45em 0; }
-ul, ol { margin: .3em 0 .4em 1.25em; padding: 0; }
-li { margin: .16em 0; }
-pre { background: #f6f6f6; padding: .5em .7em; font-size: 9pt; line-height: 1.45;
+p { margin: @@PM@@ 0; }
+ul, ol { margin: @@ULM@@; padding: 0; }
+li { margin: @@LIM@@ 0; }
+pre { background: #f6f6f6; padding: .5em .7em; font-size: @@PRE@@; line-height: 1.45;
       white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
 pre.code { border-left: 2px solid #bfbfbf; }
-table { border-collapse: collapse; margin: .55em 0; width: 100%%; font-size: 10pt; }
+table { border-collapse: collapse; margin: .55em 0; width: 100%%; font-size: @@TBL@@; }
 th, td { border: 1px solid #cfcfcf; padding: .25em .5em; text-align: left; vertical-align: top; }
 thead th { background: #f2f2f2; }
 tbody tr:nth-child(even) td { background: #fafafa; }
 tr { page-break-inside: avoid; }
 blockquote table { width: auto; font-size: 9.5pt; }
 code { font-size: .93em; background: #f0f0f0; padding: 0 .18em; }
-blockquote { margin: .5em 0; padding: .1em .9em; border-left: 3px solid #d0d0d0; color: #444; }
+blockquote { margin: @@BQM@@; padding: .1em .9em; border-left: 3px solid #d0d0d0; color: #444; }
 hr { border: 0; border-top: 1px solid #ddd; margin: 1em 0; }
 .link { text-decoration: underline; }
-</style></head><body>%s</body></html>""" % body
+"""
+for k, v in V.items():
+    css = css.replace("@@%s@@" % k.upper(), v)
+doc = ('<!doctype html><html><head><meta charset="utf-8"><style>' + css
+       + '</style></head><body>%s</body></html>') % body
 open(sys.argv[2], "w", encoding="utf-8").write(doc)
 PY
+}
+
+# 数 PDF 里的页对象（stdlib，不引第三方依赖）
+pdf_pages() {
+  python3 -c 'import re,sys;print(len(re.findall(rb"/Type\s*/Page(?![s])", open(sys.argv[1],"rb").read())))' "$1" 2>/dev/null
+}
+
+# 用指定排版档渲一次，产出写到 $2
+render_to() {  # $1=md $2=pdf $3=tier
+  local html="${2%.pdf}.html"
+  md2html "$1" "$html" "$3" || return 1
+  [ -s "$html" ] || return 1
+  timeout 25s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+      --no-pdf-header-footer --print-to-pdf="$2" "file://$html" >/dev/null 2>&1 || return 1
+  [ -s "$2" ]
 }
 
 # ── 4. 逐个渲染 ──────────────────────────────────────────────────────
@@ -275,7 +316,7 @@ render_one() {
     cp "$abs" "$tmp/doc.md" 2>/dev/null || { rm -rf "$tmp"; return 0; }
   fi
 
-  md2html "$tmp/doc.md" "$tmp/doc.html"
+  md2html "$tmp/doc.md" "$tmp/doc.html" std
   if [ ! -s "$tmp/doc.html" ]; then rm -rf "$tmp"; say "$target HTML 生成失败，跳过"; return 0; fi
 
   if [ -n "$OUT_DIR" ]; then
@@ -296,11 +337,23 @@ render_one() {
   stamp="$(date +%Y%m%d-%H%M%S)"
   pdf="$dest/${base}-${stamp}.pdf"
 
-  if ! timeout 25s "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
-        --no-pdf-header-footer --print-to-pdf="$pdf" "file://$tmp/doc.html" >/dev/null 2>&1; then
+  if ! render_to "$tmp/doc.md" "$pdf" std; then
     rm -rf "$tmp"; say "$target 排版失败或超时 → 跳过，不影响任何流程"; return 0
   fi
-  [ -s "$pdf" ] || { rm -rf "$tmp"; say "$target 排版产出为空 → 跳过"; return 0; }
+
+  # 末页合并：标准排版下末页只剩一点点时，改用 fit 档再排一次；
+  # 只有「真少一页」才采用（吞不下就是内容该改，不是格式该再压）。
+  local p_std p_fit
+  p_std="$(pdf_pages "$pdf")"
+  if [ -n "$p_std" ] && [ "$p_std" -gt 1 ] 2>/dev/null; then
+    if render_to "$tmp/doc.md" "$tmp/fit.pdf" fit; then
+      p_fit="$(pdf_pages "$tmp/fit.pdf")"
+      if [ -n "$p_fit" ] && [ "$p_fit" = "$((p_std - 1))" ]; then
+        mv -f "$tmp/fit.pdf" "$pdf"; note="$note·末页合并"
+        [ "$QUIET" = 1 ] || echo "$TAG   $target：末页收进前页（$p_std 页 → $p_fit 页，排版档 fit）"
+      fi
+    fi
+  fi
 
   python3 - "$pdf" "$tmp/doc.md" "$note" "$QUIET" "$base" <<'PY'
 import glob, os, re, sys
