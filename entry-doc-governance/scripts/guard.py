@@ -40,6 +40,15 @@ TAG = "[guard]"
 HINT = "（精简动作：指针化下沉 / 归档历史 / 职责切割 / 拆分）"
 
 
+def _emit(msg):
+    r"""输出到 stderr；按 stderr 的编码把装饰符号降级为 ASCII。
+
+    Windows 控制台常为 GBK，✅ / ❌ / ⏭️ 无法编码，默认会退化成 `\u2705` 这种
+    转义字面量（观感差）。降级逻辑与符号表由 measure.safe_text 统一提供（单一事实源）。
+    """
+    print(measure.safe_text(msg, sys.stderr), file=sys.stderr)
+
+
 def load(path, staged):
     """返回 (raw, source_label, skip_reason)。
 
@@ -98,11 +107,11 @@ def main(argv=None):
         raw, label, skip = load(path, args.staged)
         if raw is None and skip:
             if not args.quiet:
-                print("%s ⏭️  %s %s —— 跳过校验" % (TAG, name, skip), file=sys.stderr)
+                _emit("%s ⏭️  %s %s —— 跳过校验" % (TAG, name, skip))
             continue
         if raw is None:
             # fail-closed：校验无法完成 → 拒绝（静默放行等于门禁变哑）
-            print("%s ❌ %s 校验无法完成：%s —— 拒绝（fail-closed）" % (TAG, name, label), file=sys.stderr)
+            _emit("%s ❌ %s 校验无法完成：%s —— 拒绝（fail-closed）" % (TAG, name, label))
             worst = 1
             continue
 
@@ -110,26 +119,25 @@ def main(argv=None):
         level, _ = measure.verdict(rec, policy)
 
         if rec["tokens"] > policy["max_tokens"]:
-            print("%s ❌ %s %s 已达约 %d token（上限 %d），拒绝提交" %
-                  (TAG, name, label, rec["tokens"], policy["max_tokens"]), file=sys.stderr)
-            print("%s    请先精简：指针化下沉 docs/，或归档历史内容%s" % (TAG, HINT), file=sys.stderr)
+            _emit("%s ❌ %s %s 已达约 %d token（上限 %d），拒绝提交" %
+                  (TAG, name, label, rec["tokens"], policy["max_tokens"]))
+            _emit("%s    请先精简：指针化下沉 docs/，或归档历史内容%s" % (TAG, HINT))
             worst = max(worst, 1)
             continue
 
         if rec["tokens"] > policy["warn_tokens"]:
-            print("%s ⚠️  %s %s 已达约 %d token（提醒线 %d，上限 %d）——建议精简后再提交%s" %
-                  (TAG, name, label, rec["tokens"], policy["warn_tokens"], policy["max_tokens"], HINT),
-                  file=sys.stderr)
+            _emit("%s ⚠️  %s %s 已达约 %d token（提醒线 %d，上限 %d）——建议精简后再提交%s" %
+                  (TAG, name, label, rec["tokens"], policy["warn_tokens"], policy["max_tokens"], HINT))
             worst = max(worst, 2)
 
         if rec["gzip_bytes"] > policy["max_gzip_bytes"]:
-            print("%s ⚠️  %s gzip 后 %d 字节（>%d，冗余探针）——检查是否有重复/灌水内容" %
-                  (TAG, name, rec["gzip_bytes"], policy["max_gzip_bytes"]), file=sys.stderr)
+            _emit("%s ⚠️  %s gzip 后 %d 字节（>%d，冗余探针）——检查是否有重复/灌水内容" %
+                  (TAG, name, rec["gzip_bytes"], policy["max_gzip_bytes"]))
             worst = max(worst, 2)
 
         if level == "ok" and not args.quiet:
-            print("%s ✅ %s %s约 %d token（距提醒线 %d）" %
-                  (TAG, name, label, rec["tokens"], policy["warn_tokens"] - rec["tokens"]), file=sys.stderr)
+            _emit("%s ✅ %s %s约 %d token（距提醒线 %d）" %
+                  (TAG, name, label, rec["tokens"], policy["warn_tokens"] - rec["tokens"]))
 
     return worst
 
