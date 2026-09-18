@@ -189,8 +189,10 @@ PREAMBLE = """\
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 12.5pt, weight: "bold", tracking: 0.02em)
   #it.body
 ]
-#set list(spacing: 0.16em)
-#set enum(spacing: 0.16em)
+// 列表项间距 ≈ 正文行距的 1.2 倍（行内 15.0pt → 项间 18.2pt）。
+// 必须明显大于折行项的「行内」间距，否则看不出项在哪儿结束。
+#set list(spacing: 1em)
+#set enum(spacing: 1em)
 #show raw: it => text(font: "DejaVu Sans Mono", size: 9pt, fill: rgb("#333333"))[#it]
 
 """
@@ -213,8 +215,9 @@ PREAMBLE_FIT = """\
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 12pt, weight: "bold", tracking: 0.02em)
   #it.body
 ]
-#set list(spacing: 0.09em)
-#set enum(spacing: 0.09em)
+// 同上比例，按 fit 的字号压缩（行内 13.0pt → 项间 15.5pt）。
+#set list(spacing: 0.85em)
+#set enum(spacing: 0.85em)
 #show raw: it => text(font: "DejaVu Sans Mono", size: 8.5pt, fill: rgb("#333333"))[#it]
 
 """
