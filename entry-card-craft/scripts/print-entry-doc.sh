@@ -89,7 +89,7 @@ find_chrome() {
   return 1
 }
 CHROME="$(find_chrome)" || {
-  say "没找到可用的无头浏览器（可设 CHROME_PATH）→ 本步跳过，不影响任何流程"
+  warn "没找到可用的无头浏览器（可设 CHROME_PATH）→ 这次没排成；不影响任何流程"
   exit 0
 }
 
@@ -308,7 +308,7 @@ render_one() {
       if git -C "$root" show ":$rel" > "$tmp/doc.md" 2>/dev/null; then
         note="暂存版"
       else
-        cp "$abs" "$tmp/doc.md" 2>/dev/null || { rm -rf "$tmp"; say "$target 读不到，跳过"; return 0; }
+        cp "$abs" "$tmp/doc.md" 2>/dev/null || { rm -rf "$tmp"; warn "$target 读不到，跳过"; return 0; }
         note="工作区版（暂存区无此文件）"
       fi
     else
@@ -319,7 +319,7 @@ render_one() {
   fi
 
   md2html "$tmp/doc.md" "$tmp/doc.html" std
-  if [ ! -s "$tmp/doc.html" ]; then rm -rf "$tmp"; say "$target HTML 生成失败，跳过"; return 0; fi
+  if [ ! -s "$tmp/doc.html" ]; then rm -rf "$tmp"; warn "$target：HTML 生成失败 → 这次没排成"; return 0; fi
 
   if [ -n "$OUT_DIR" ]; then
     dest="$OUT_DIR"
@@ -328,7 +328,7 @@ render_one() {
   else
     dest="$(dirname "$abs")/.entry-doc-pdf"
   fi
-  mkdir -p "$dest" 2>/dev/null || { rm -rf "$tmp"; say "输出目录建不了：$dest，跳过"; return 0; }
+  mkdir -p "$dest" 2>/dev/null || { rm -rf "$tmp"; warn "输出目录建不了：$dest，跳过"; return 0; }
 
   # 文件名带路径信息：一个仓库里可能有多份同名入口文档（如两个 SKILL.md）
   if [ -n "$root" ] && [ -n "${rel:-}" ]; then
@@ -340,7 +340,7 @@ render_one() {
   pdf="$dest/${base}-${stamp}.pdf"
 
   if ! render_to "$tmp/doc.md" "$pdf" std; then
-    rm -rf "$tmp"; say "$target 排版失败或超时 → 跳过，不影响任何流程"; return 0
+    rm -rf "$tmp"; warn "$target：排版失败或超时 → 这次没排成；不影响任何流程"; return 0
   fi
 
   # 末页合并：标准排版下末页只剩一点点时，改用 fit 档再排一次；

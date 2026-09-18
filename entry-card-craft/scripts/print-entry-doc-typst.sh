@@ -201,13 +201,13 @@ typst_resolve() {
 }
 
 TYPST="$(typst_resolve)" || {
-  say "没找到 Typst 也没拉到（可设 TYPST_PATH，或 grep 本脚本的缓存路径手动放置）→ 本步跳过，不影响任何流程"
+  warn "没找到 Typst 也没拉到（可设 TYPST_PATH，或 grep 本脚本的缓存路径手动放置）→ 这次没排成；不影响任何流程"
   exit 0
 }
 
 # ── 3. 版本核对 ────────────────────────────────────────────────────────
 TYPST_VERSION="$("$TYPST" --version 2>/dev/null | head -1)"
-[ -n "$TYPST_VERSION" ] || { say "Typst 版本检测失败 → 本步跳过"; exit 0; }
+[ -n "$TYPST_VERSION" ] || { warn "Typst 版本检测失败 → 这次没排成"; exit 0; }
 say "使用 $TYPST_VERSION"
 case "$TYPST_VERSION" in
   *" $TYPST_PIN_VERSION "*) : ;;
@@ -319,7 +319,7 @@ PY
   [ -n "${rel:-}" ] || rel="$(basename "$abs")"
 
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/entry-doc-typst.XXXXXX")"
-  cp "$abs" "$tmp/doc.md" 2>/dev/null || { rm -rf "$tmp"; say "$target 读不到，跳过"; return 0; }
+  cp "$abs" "$tmp/doc.md" 2>/dev/null || { rm -rf "$tmp"; warn "$target 读不到，跳过"; return 0; }
 
   # 输出目录
   if [ -n "$OUT_DIR" ]; then
@@ -329,7 +329,7 @@ PY
   else
     dest="$(dirname "$abs")/.entry-doc-pdf"
   fi
-  mkdir -p "$dest" 2>/dev/null || { rm -rf "$tmp"; say "输出目录建不了：$dest，跳过"; return 0; }
+  mkdir -p "$dest" 2>/dev/null || { rm -rf "$tmp"; warn "输出目录建不了：$dest，跳过"; return 0; }
 
   # 文件名：文档键 = 文档相对路径去掉 .md、把 '/' 换成 '-'
   base="$(printf '%s' "${rel%.md}" | tr '/' '-')"
@@ -339,16 +339,16 @@ PY
   # 转换为 Typst
   md2typst "$tmp/doc.md" "$tmp/doc.typ" std
   if [ ! -s "$tmp/doc.typ" ]; then
-    rm -rf "$tmp"; say "$target Typst 转换失败，跳过"; return 0
+    rm -rf "$tmp"; warn "$target：Typst 转换失败 → 这次没排成"; return 0
   fi
 
   # 编译为 PDF
   if ! timeout 25s "$TYPST" compile "$tmp/doc.typ" "$pdf" >/dev/null 2>&1; then
-    rm -rf "$tmp"; say "$target Typst 编译失败或超时 → 跳过，不影响任何流程"
+    rm -rf "$tmp"; warn "$target：Typst 编译失败或超时 → 这次没排成；不影响任何流程"
     return 0
   fi
 
-  [ -s "$pdf" ] || { rm -rf "$tmp"; say "$target PDF 生成失败，跳过"; return 0; }
+  [ -s "$pdf" ] || { rm -rf "$tmp"; warn "$target：PDF 生成失败 → 这次没排成"; return 0; }
 
   # 末页合并：标准排版下末页只剩一点点时，改用 fit 档再排一次
   # 档位与页数只在这里判一次；查看模式复用这个结果（图片与 PDF 同档同页）。
