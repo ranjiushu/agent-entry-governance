@@ -10,6 +10,7 @@
 #   print-entry-doc-typst.sh SKILL.md docs/RULES.md   # 指定文件
 #   print-entry-doc-typst.sh --out DIR                # 输出目录（默认 <仓库>/.git/entry-doc-pdf）
 #   print-entry-doc-typst.sh --quiet                  # 只报结果行
+#   print-entry-doc-typst.sh --fetch-typst            # 只拉取钉死的 Typst 到缓存，不排版
 #
 # 排版档（两档，页数以标准档为准）
 #   std（默认）：标准排版；一切页数按它计，页数间可比。
@@ -23,9 +24,19 @@
 #   1 = 用法错误。
 #
 # 依赖
-#   bash + python3（标准库）；Typst 编译器（typst 命令）。
+#   bash + python3（标准库）；Typst 编译器。Typst 版本钉死、首次运行自动拉取（见下）。
 #   字体：需要 Noto Serif CJK SC（正文）和 Noto Sans CJK SC（标题），
 #         否则 Typst 会回退到默认字体，可能影响排版效果。
+#
+# Typst 版本与校验和
+#   钉死版本：TYPST_PIN_VERSION（见「解析 Typst」一节）。缓存目录：
+#     ${XDG_CACHE_HOME:-$HOME/.cache}/repo-resume/typst/<版本>/<target>/typst
+#   首次运行按本机平台从官方 GitHub release 拉取对应产物，先核对 sha256 再解压；
+#   校验不过一律拒用，且全程 fail-open（拉不到就跳过，绝不阻断调用方）。
+#   解析顺序：TYPST_PATH → 本地缓存 → 首次自动拉取 → 系统 typst（版本可能不同，会告警）。
+#   开关：TYPST_PATH 显式指定；TYPST_CACHE 改缓存位置；AGENT_DOC_TYPST_FETCH=0 禁止联网拉取。
+#   注意：官方 release 不提供校验和文件，表内 sha256 是下载后实算并钉死在本脚本里的
+#   本地值，用于检测下载损坏或被替换，不是发布方签名。
 #
 # 中文排版（为什么不做「中英文之间加空格」那件事）
 #   中西文间隙交给 Typst 原生 cjk-latin-spacing（默认 auto，约 0.25em 间隙），
@@ -46,11 +57,13 @@ QUIET=0
 OUT_DIR=""
 TARGETS=()
 KEEP="${AGENT_DOC_PDF_KEEP:-10}"
+FETCH_ONLY=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --quiet)  QUIET=1; shift ;;
     --out)    OUT_DIR="${2:-}"; shift 2 ;;
+    --fetch-typst) FETCH_ONLY=1; shift ;;
     -h|--help) awk 'NR==1{next} /^#/{print; next} {exit}' "$0"; exit 0 ;;
     -*) echo "$TAG 未知参数：$1" >&2; exit 1 ;;
     *)  TARGETS+=("$1"); shift ;;
@@ -65,33 +78,121 @@ say() { [ "$QUIET" = 1 ] || echo "$TAG $*"; }
 if [ ${#TARGETS[@]} -eq 0 ]; then
   for n in AGENTS.md AGENT.md; do [ -f "$n" ] && TARGETS+=("$n"); done
 fi
-if [ ${#TARGETS[@]} -eq 0 ]; then
+if [ ${#TARGETS[@]} -eq 0 ] && [ "$FETCH_ONLY" != 1 ]; then
   say "未找到入口文档，跳过"
   exit 0
 fi
 
-# ── 2. 找 Typst 编译器 ─────────────────────────────────────────────────
-find_typst() {
-  local t
-  for t in "${TYPST_PATH:-}" \
-           "$(command -v typst 2>/dev/null)" \
-           /usr/local/bin/typst \
-           /usr/bin/typst; do
-    [ -n "$t" ] && [ -x "$t" ] && { echo "$t"; return 0; }
-  done
+# ── 2. 解析 Typst：显式指定 → 本地缓存 → 首次自动拉取 → 系统回退 ─────────
+# 版本与校验和都钉死，保证同一份文档在任何机器上排出来的页面一致。
+TYPST_PIN_VERSION="0.15.1"
+TYPST_CACHE="${TYPST_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/repo-resume/typst}"
+TYPST_FETCH="${AGENT_DOC_TYPST_FETCH:-1}"   # 0 = 禁止联网拉取
+
+note() { [ "$QUIET" = 1 ] || echo "$TAG $*" >&2; }   # 进度（可静默）
+warn() { echo "$TAG $*" >&2; }                       # 失败与告警（始终可见）
+
+sha256_of() {  # $1=文件 → 打印十六进制摘要
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum  >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
+  else return 1; fi
+}
+
+# 本机平台 → Typst 官方 release 的 target 名
+typst_target() {
+  case "$(uname -s):$(uname -m)" in
+    Linux:x86_64)              echo x86_64-unknown-linux-musl ;;
+    Linux:aarch64|Linux:arm64) echo aarch64-unknown-linux-musl ;;
+    Darwin:x86_64)             echo x86_64-apple-darwin ;;
+    Darwin:arm64)              echo aarch64-apple-darwin ;;
+    *) return 1 ;;
+  esac
+}
+
+# target → 官方 release 产物的 sha256
+# 来源 https://github.com/typst/typst/releases/tag/v0.15.1（2026-09-18 下载后实算）。
+# 官方不提供校验和文件，这是本地钉死值，用于检测下载损坏或被替换，非发布方签名。
+typst_sha() {
+  case "$1" in
+    x86_64-unknown-linux-musl)  echo a6d077d0a95eed5a2eba715b2dae06be954f624ccbf85758a03f389ded33118c ;;
+    aarch64-unknown-linux-musl) echo 5aa8d74a3d906e60ea12a66ac2f37f8eef1b14cbad7182a745e393a10c23dcee ;;
+    x86_64-apple-darwin)        echo 7f9fdd9584866245de9a79e0add8f9236fae6f40a8a45e2c4771ccc14db4e0fa ;;
+    aarch64-apple-darwin)       echo 48f62ed034aa3a7978309579ac6ca00045e2ef0da73114e8af27cfd8e74dc05a ;;
+    *) return 1 ;;
+  esac
+}
+
+# 拉取 → 校验 sha256 → 解压进缓存；成功回显可执行文件路径
+typst_fetch() {  # $1=target $2=期望 sha256
+  local target="$1" want="$2"
+  local dest bin
+  dest="$TYPST_CACHE/$TYPST_PIN_VERSION/$target"
+  bin="$dest/typst"
+  local url="https://github.com/typst/typst/releases/download/v$TYPST_PIN_VERSION/typst-$target.tar.xz"
+  command -v curl >/dev/null 2>&1 || { warn "没找到 curl，无法自动拉取 Typst"; return 1; }
+  local tmp; tmp="$(mktemp -d "${TMPDIR:-/tmp}/typst-fetch.XXXXXX")" || return 1
+  note "首次运行：拉取 Typst $TYPST_PIN_VERSION（$target）…"
+  if ! curl -sSL --fail --retry 2 -o "$tmp/pack.tar.xz" "$url"; then
+    warn "拉取失败：$url"; rm -rf "$tmp"; return 1
+  fi
+  local got; got="$(sha256_of "$tmp/pack.tar.xz")" || {
+    warn "本机没有 sha256sum/shasum，无法校验，放弃拉取"; rm -rf "$tmp"; return 1
+  }
+  if [ "$got" != "$want" ]; then
+    warn "校验和不符，拒用（期望 $want，实得 $got）"; rm -rf "$tmp"; return 1
+  fi
+  if ! tar -xJf "$tmp/pack.tar.xz" -C "$tmp" 2>/dev/null; then
+    warn "解压失败（tar 需要 xz 支持）"; rm -rf "$tmp"; return 1
+  fi
+  local src; src="$(find "$tmp" -type f -name typst 2>/dev/null | head -1)"
+  [ -n "$src" ] || { warn "包里没找到 typst 可执行文件"; rm -rf "$tmp"; return 1; }
+  mkdir -p "$dest" || { rm -rf "$tmp"; return 1; }
+  cp -f "$src" "$bin" && chmod +x "$bin" || { warn "写入缓存失败：$bin"; rm -rf "$tmp"; return 1; }
+  rm -rf "$tmp"
+  echo "$bin"
+}
+
+typst_resolve() {
+  # 1) 显式指定优先
+  if [ -n "${TYPST_PATH:-}" ] && [ -x "${TYPST_PATH}" ]; then echo "$TYPST_PATH"; return 0; fi
+  # 2) 本地缓存的钉死版本 → 3) 首次自动拉取
+  local target sha cached
+  if target="$(typst_target)" && sha="$(typst_sha "$target")"; then
+    cached="$TYPST_CACHE/$TYPST_PIN_VERSION/$target/typst"
+    if [ -x "$cached" ]; then echo "$cached"; return 0; fi
+    if [ "$TYPST_FETCH" = 1 ]; then
+      local b; b="$(typst_fetch "$target" "$sha")" && [ -n "$b" ] && { echo "$b"; return 0; }
+    else
+      note "自动拉取已关闭（AGENT_DOC_TYPST_FETCH=0）"
+    fi
+  fi
+  # 4) 回退：系统里的 typst，版本可能与钉死值不同
+  local sys; sys="$(command -v typst 2>/dev/null)"
+  if [ -n "$sys" ] && [ -x "$sys" ]; then
+    warn "回退到系统 typst（$sys），版本可能不是钉死的 $TYPST_PIN_VERSION"
+    echo "$sys"; return 0
+  fi
   return 1
 }
-TYPST="$(find_typst)" || {
-  say "没找到 Typst 编译器（可设 TYPST_PATH）→ 本步跳过，不影响任何流程"
+
+TYPST="$(typst_resolve)" || {
+  say "没找到 Typst 也没拉到（可设 TYPST_PATH，或 grep 本脚本的缓存路径手动放置）→ 本步跳过，不影响任何流程"
   exit 0
 }
 
-# ── 3. 检查 Typst 版本 ─────────────────────────────────────────────────
-TYPST_VERSION="$("$TYPST" --version 2>/dev/null | head -1)" || {
-  say "Typst 版本检测失败 → 本步跳过"
-  exit 0
-}
+# ── 3. 版本核对 ────────────────────────────────────────────────────────
+TYPST_VERSION="$("$TYPST" --version 2>/dev/null | head -1)"
+[ -n "$TYPST_VERSION" ] || { say "Typst 版本检测失败 → 本步跳过"; exit 0; }
 say "使用 $TYPST_VERSION"
+case "$TYPST_VERSION" in
+  *" $TYPST_PIN_VERSION "*) : ;;
+  *) warn "注意：实际版本不是钉死的 $TYPST_PIN_VERSION，页面可能与别处不可比" ;;
+esac
+
+if [ "$FETCH_ONLY" = 1 ]; then
+  say "Typst 已就绪：$TYPST"
+  exit 0
+fi
 
 # ── 4. 字体检测 ────────────────────────────────────────────────────────
 # Typst 需要字体文件。我们检查是否有所需字体，如果没有，给出警告。
