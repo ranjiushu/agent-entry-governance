@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+"""md2typst.py —— 把 print-entry-doc.sh 里那套 markdown 解析规则,原样改写成 Typst 源码输出。
+   块级覆盖：代码块 / 引用块(递归) / 表格 / 有序与无序列表 / 标题 / 段落 / 分隔线
+   行内覆盖：`code`、**bold**、[text](link)
+   与原 md2html 的唯一差异：输出目标从 HTML 变成 Typst markup，样式改用 Typst 的
+   #set / #show 规则统一声明（相当于原来那份 CSS 的等价物）。
+"""
+import re, sys
+
+QUOTE = re.compile(r"^\s*>\s?")
+UL = re.compile(r"^\s*[-*+]\s+")
+OL = re.compile(r"^\s*\d+[.)]\s+")
+HR = re.compile(r"^\s*(-{3,}|\*{3,}|_{3,})\s*$")
+FENCE = re.compile(r"^\s*```")
+HEAD = re.compile(r"^(#{1,6})\s+(.*)$")
+
+def esc(s):
+    # Typst 的特殊字符：# * _ $ [ ] < > @ ` \ 都要转义
+    s = s.replace("\\", "\\\\")
+    for ch in "#*_$[]<>@`":
+        s = s.replace(ch, "\\" + ch)
+    return s
+
+def inline(s):
+    # 先处理行内代码/加粗/链接，再对剩余纯文本转义，避免语法字符被二次转义
+    parts = []
+    pattern = re.compile(r"(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))")
+    pos = 0
+    for m in pattern.finditer(s):
+        if m.start() > pos:
+            parts.append(esc(s[pos:m.start()]))
+        chunk = m.group(0)
+        if chunk.startswith("`"):
+            parts.append("#raw(%r)" % chunk[1:-1])
+        elif chunk.startswith("**"):
+            parts.append("*%s*" % esc(chunk[2:-2]))  # Typst 里 *x* 就是加粗
+        else:
+            mm = re.match(r"\[([^\]]+)\]\(([^)]+)\)", chunk)
+            parts.append("#link(%r)[%s]" % (mm.group(2), esc(mm.group(1))))
+        pos = m.end()
+    parts.append(esc(s[pos:]))
+    return "".join(parts)
+
+def strip_q(line):
+    return QUOTE.sub("", line, count=1)
+
+def is_sep(line):
+    t = line.strip()
+    return bool(t) and set(t) <= set("|-: \t") and t.count("-") >= 2
+
+def cells(line):
+    r = line.strip()
+    r = r[1:] if r.startswith("|") else r
+    r = r[:-1] if r.endswith("|") else r
+    return [c.strip() for c in r.split("|")]
+
+def take_table(lines, i):
+    head, rows = cells(lines[i]), []
+    i += 2
+    while i < len(lines) and lines[i].strip() and "|" in lines[i]:
+        rows.append(cells(lines[i]))
+        i += 1
+    ncol = len(head)
+    out = ["#table(", "  columns: %d," % ncol, "  stroke: 0.5pt + rgb(\"#cfcfcf\"),"]
+    out.append("  fill: (x, y) => if y == 0 { rgb(\"#f2f2f2\") } else if calc.even(y) { rgb(\"#fafafa\") } else { white },")
+    hdr = ", ".join("[*%s*]" % inline(c) for c in head)
+    out.append("  %s," % hdr)
+    for r in rows:
+        out.append("  " + ", ".join("[%s]" % inline(c) for c in r) + ",")
+    out.append(")")
+    return "\n".join(out), i
+
+def render(lines, depth=0):
+    out, i, n = [], 0, len(lines)
+    while i < n:
+        raw = lines[i]
+        if FENCE.match(raw):
+            i += 1
+            buf = []
+            while i < n and not FENCE.match(lines[i]):
+                buf.append(lines[i])
+                i += 1
+            i += 1
+            code = "\n".join(buf)
+            out.append("#block(fill: rgb(\"#f6f6f6\"), inset: 8pt, width: 100%, radius: 2pt)[")
+            out.append("```\n%s\n```" % code)
+            out.append("]")
+            continue
+        if QUOTE.match(raw):
+            buf = []
+            while i < n and (QUOTE.match(lines[i]) or (buf and not lines[i].strip())):
+                buf.append(strip_q(lines[i]) if QUOTE.match(lines[i]) else "")
+                i += 1
+            inner = render(buf, depth + 1)
+            out.append("#block(inset: (left: 10pt), stroke: (left: 2pt + rgb(\"#d0d0d0\")))[")
+            out.append(inner)
+            out.append("]")
+            continue
+        if "|" in raw and i + 1 < n and is_sep(lines[i + 1]):
+            t, i = take_table(lines, i)
+            out.append(t)
+            continue
+        if UL.match(raw) or OL.match(raw):
+            pat = UL if UL.match(raw) else OL
+            marker = "-" if pat is UL else "+"
+            while i < n and pat.match(lines[i]):
+                item = pat.sub("", lines[i], count=1)
+                i += 1
+                while (i < n and lines[i].strip() and not pat.match(lines[i])
+                       and not FENCE.match(lines[i]) and not QUOTE.match(lines[i])
+                       and not HEAD.match(lines[i]) and "|" not in lines[i]):
+                    item += " " + lines[i].strip()
+                    i += 1
+                out.append("%s %s" % (marker, inline(item)))
+            continue
+        if HR.match(raw):
+            out.append("#line(length: 100%, stroke: 0.5pt + rgb(\"#dddddd\"))")
+            i += 1
+            continue
+        m = HEAD.match(raw)
+        if m:
+            lv = len(m.group(1))
+            out.append("%s %s" % ("=" * lv, inline(m.group(2))))
+            i += 1
+            continue
+        if not raw.strip():
+            i += 1
+            continue
+        buf = [raw.strip()]
+        i += 1
+        while (i < n and lines[i].strip() and not FENCE.match(lines[i])
+               and not QUOTE.match(lines[i]) and not HEAD.match(lines[i])
+               and not UL.match(lines[i]) and not OL.match(lines[i])
+               and not HR.match(lines[i]) and "|" not in lines[i]):
+            buf.append(lines[i].strip())
+            i += 1
+        out.append(inline(" ".join(buf)))
+        out.append("")
+        continue
+    return "\n".join(out)
+
+PREAMBLE = """\
+// ── 页面与字体：对应原 print-entry-doc.sh 里 CSS 的 @page / body / h1-h4 规则 ──
+// 标准档（std）：22mm/20mm 边距、10.5pt、行距 1.7；与原脚本 std 档一一对应。
+#set page(paper: "a4", margin: (x: 20mm, y: 22mm))
+#set text(font: ("Noto Serif CJK SC", "Georgia"), size: 10.5pt, lang: "zh")
+#set par(leading: 0.85em, justify: false)
+#show heading.where(level: 1): it => [
+  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 17pt, weight: "bold")
+  #block(below: 0.45em, above: 1.1em)[#it.body]
+  #line(length: 100%, stroke: 0.5pt + rgb("#c9c9c9"))
+]
+#show heading.where(level: 2): it => block(above: 1.1em, below: 0.45em)[
+  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 13.5pt, weight: "bold")
+  #it.body
+]
+#show heading.where(level: 3): it => block(above: 1.1em, below: 0.45em)[
+  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 12pt, weight: "bold")
+  #it.body
+]
+#show raw: it => text(font: "DejaVu Sans Mono", size: 9pt, fill: rgb("#333333"))[#it]
+
+"""
+
+PREAMBLE_FIT = """\
+// 末页合并档（fit）：收紧边距/字号/行距，多容纳约三成
+#set page(paper: "a4", margin: (x: 17mm, y: 16mm))
+#set text(font: ("Noto Serif CJK SC", "Georgia"), size: 9.8pt, lang: "zh")
+#set par(leading: 0.85em, justify: false)
+#show heading.where(level: 1): it => [
+  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 15pt, weight: "bold")
+  #block(below: 0.4em, above: 1em)[#it.body]
+  #line(length: 100%, stroke: 0.5pt + rgb("#c9c9c9"))
+]
+#show heading.where(level: 2): it => block(above: 1em, below: 0.4em)[
+  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 12pt, weight: "bold")
+  #it.body
+]
+#show heading.where(level: 3): it => block(above: 1em, below: 0.4em)[
+  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 11pt, weight: "bold")
+  #it.body
+]
+#show raw: it => text(font: "DejaVu Sans Mono", size: 8.5pt, fill: rgb("#333333"))[#it]
+
+"""
+
+def convert(md_path, out_path, tier='std'):
+    text = open(md_path, encoding="utf-8").read()
+    # 跳过 YAML frontmatter（原脚本没有这个逻辑，但 SKILL.md 有 --- 头，补一个最小处理）
+    if text.startswith("---"):
+        end = text.find("\n---", 3)
+        if end != -1:
+            text = text[end + 4:]
+    lines = text.split("\n")
+    body = render(lines)
+    if tier == 'fit':
+        preamble = PREAMBLE_FIT
+    else:
+        preamble = PREAMBLE
+    open(out_path, "w", encoding="utf-8").write(preamble + body)
+
+if __name__ == "__main__":
+    convert(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else 'std')
