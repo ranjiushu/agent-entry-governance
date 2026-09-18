@@ -34,7 +34,7 @@ description: 把 AGENTS.md / CLAUDE.md 这类 Agent 入口文档写成仓库的�
 | 给新项目、新仓库写一张入口卡（简历） | entry-card-craft |
 | 简历与 README 怎么分工 | entry-card-craft（代价结构与三测试） |
 | 想看看排出来几页 / 末页是不是只剩一行 | entry-card-craft（打印层） |
-| 想亲眼看页面 / 把入口文档当图看 / 要引用页面本身 | entry-card-craft（查看模式：逐页图片 + INDEX.md） |
+| 想亲眼看页面 / 把入口文档当图看 / 要引用页面本身 | entry-card-craft（查看模式：逐页图片 + INDEX.md；实验件） |
 | 终审要过一遍页面 / 拿不准写得好不好 | entry-card-craft（页面终审） |
 | 这段文字像 AI 写的 / 去味 / 文风生硬 | entry-deai-style（上游 humanizer-zh） |
 | 想知道为什么这么定 / 要改判据本身 | entry-card-craft/references/philosophy.md |

@@ -40,9 +40,9 @@ bash entry-card-craft/scripts/print-entry-doc-typst.sh SKILL.md entry-*/SKILL.md
 
 要看页面本身而不只是页数时用查看模式：`view-entry-doc.sh` 把已选定的那一档逐页导出成图片，并写一份 `INDEX.md` 用相对路径引用每页（图片落在 PDF 旁边、同名滚动覆盖、不进版本控制）。仅 Typst 后端支持。
 
-要把它递到人眼前——手机、浏览器、对话里的 markdown——还得挂个服务：本地路径多数渲染器加载不出来（手机聊天 App 尤其），http 才行。`serve-entry-doc.sh` 把产出目录挂成静态服务，并打印可直接粘进 markdown 的引用；它是长驻进程，在持久终端里前台跑，别挂进钩子。
+要把它递到人眼前——手机、浏览器、对话里的 markdown——还得挂个服务：本地路径多数渲染器加载不出来（手机聊天 App 尤其），http 才行。`serve-entry-doc.sh` 把产出目录挂成静态服务，并打印可直接粘进 markdown 的引用；它是长驻进程，在持久终端里前台跑，别挂进钩子。这两件都是**实验件**，只在一台 Linux + Typst 上验证过。
 
-打印不阻断流程：要跑一次渲染，Typst 首次还要拉一次编译器（版本钉死、核对 sha256 后进用户缓存），所以挂 post-commit，永不返回非零。这不是说它次要：**守卫管有没有失控，页面管读不读得下去。**缺编译器时脚本会明说这次没排成，终审据此标注「未经页面终审」，不装作看过。无头浏览器版仍在，`--backend chrome` 可回退。
+打印不阻断流程：要跑一次渲染，Typst 首次还要拉一次编译器，所以挂 post-commit，永不返回非零。这不是说它次要：**守卫管有没有失控，页面管读不读得下去。**缺编译器时脚本会明说这次没排成，终审据此标注「未经页面终审」，不装作看过。无头浏览器版仍在，`--backend chrome` 可回退。
 
 ## 快速开始
 
@@ -109,8 +109,8 @@ entry-card-craft/                   简历本身：判决、排版、打印、�
 ├── references/final-audit.md       终审清单（叙事 / 排版 / 文风 / 调性），终审时才读
 └── scripts/                        打印层：print-entry-doc-typst.sh + md2typst.py（默认 Typst 后端）
                                     print-entry-doc.sh（无头浏览器回退）+ install-print-hook.sh
-                                    view-entry-doc.sh（查看模式：逐页图片 + INDEX.md）
-                                    serve-entry-doc.sh（把产出目录挂成静态服务，给手机/浏览器看）
+                                    view-entry-doc.sh（查看模式：逐页图片 + INDEX.md；实验件）
+                                    serve-entry-doc.sh（把产出目录挂成静态服务，给手机/浏览器看；实验件）
                                     selftest.sh（改完脚本跑一遍：26 条结构断言，不写死页数）
 entry-doc-governance/               文档治理：度量、阈值、安全下沉、提交点守卫
 ├── SKILL.md
