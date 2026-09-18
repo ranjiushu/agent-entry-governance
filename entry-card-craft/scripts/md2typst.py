@@ -147,14 +147,14 @@ PREAMBLE = """\
 #set par(leading: 0.7em, spacing: 0.45em, justify: false)
 #show heading.where(level: 1): it => [
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 17pt, weight: "bold")
-  #block(below: 0.45em, above: 1.1em)[#it.body]
+  #block(below: 0.6em, above: 1.1em)[#it.body]
   #line(length: 100%, stroke: 0.5pt + rgb("#c9c9c9"))
 ]
-#show heading.where(level: 2): it => block(above: 1.1em, below: 0.45em)[
+#show heading.where(level: 2): it => block(above: 1.1em, below: 0.8em)[
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 13.5pt, weight: "bold")
   #it.body
 ]
-#show heading.where(level: 3): it => block(above: 1.1em, below: 0.45em)[
+#show heading.where(level: 3): it => block(above: 1.1em, below: 0.6em)[
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 12pt, weight: "bold")
   #it.body
 ]
@@ -171,14 +171,14 @@ PREAMBLE_FIT = """\
 #set par(leading: 0.42em, spacing: 0.28em, justify: false)
 #show heading.where(level: 1): it => [
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 15pt, weight: "bold")
-  #block(below: 0.4em, above: 1em)[#it.body]
+  #block(below: 0.5em, above: 1em)[#it.body]
   #line(length: 100%, stroke: 0.5pt + rgb("#c9c9c9"))
 ]
-#show heading.where(level: 2): it => block(above: 1em, below: 0.4em)[
+#show heading.where(level: 2): it => block(above: 1em, below: 0.6em)[
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 12pt, weight: "bold")
   #it.body
 ]
-#show heading.where(level: 3): it => block(above: 1em, below: 0.4em)[
+#show heading.where(level: 3): it => block(above: 1em, below: 0.5em)[
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 11pt, weight: "bold")
   #it.body
 ]
