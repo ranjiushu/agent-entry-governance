@@ -360,6 +360,19 @@ render_one() {
   python3 - "$pdf" "$tmp/doc.md" "$note" "$QUIET" "$base" <<'PY'
 import glob, os, re, sys
 pdf, md, note, quiet, base = sys.argv[1:6]
+
+
+def _emit(s):
+    """按 stdout 能否编码把装饰符号降级为 ASCII（手法同 measure.safe_text）。
+    Windows GBK 控制台编不了 📄 会抛 UnicodeEncodeError，把结果行整份丢掉——
+    恰好是最该看到结论的时候。打印层不能 import measure（渲染器会被复制进目标仓库
+    独立运行，不许依赖别的成员），所以自备一份；两边要改一起改。"""
+    try:
+        s.encode(getattr(sys.stdout, "encoding", None) or "ascii")
+        return s
+    except (UnicodeEncodeError, LookupError):
+        return s.replace("📄", "[pdf]")
+
 raw = open(pdf, "rb").read()
 pages = len(re.findall(rb"/Type\s*/Page(?![s])", raw))
 text = open(md, encoding="utf-8").read()
@@ -371,10 +384,10 @@ cjk = len(re.findall(CJK, text))
 no_cjk = re.sub(CJK, "", text)
 ascii_chars = len(re.sub(r"\s", "", no_cjk))
 est = (cjk + ascii_chars * 0.5) / 1400.0        # 每页 ≈ 1400 全角等效字符（密排）
-print("📄 %s（%s）实排 %d 页｜算术 %.1f 页｜排版开销 %+.1f 页"
-      % (os.path.basename(pdf), note, pages, est, pages - est))
+print(_emit("📄 %s（%s）实排 %d 页｜算术 %.1f 页｜排版开销 %+.1f 页"
+      % (os.path.basename(pdf), note, pages, est, pages - est)))
 if not quiet:
-    print("   路径：%s" % pdf)
+    print(_emit("   路径：%s" % pdf))
     print("   注：算术页数是纯体积模型；实排多出来的部分是短行、表格、项目符号造成的行尾留白。")
 PY
   rm -rf "$tmp"
