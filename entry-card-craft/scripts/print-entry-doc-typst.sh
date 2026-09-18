@@ -104,20 +104,8 @@ fi
 
 # ── 5. Markdown → Typst 转换函数 ────────────────────────────────────────
 md2typst() {  # $1=md $2=typ $3=排版档（std|fit）
-  python3 - "$1" "$2" "${3:-std}" <<'PY'
-import re, sys
-
-# 导入同目录下的 md2typst.py
-import importlib.util
-import os
-script_dir = os.path.dirname(os.path.abspath(__file__))
-spec = importlib.util.spec_from_file_location("md2typst", os.path.join(script_dir, "md2typst.py"))
-md2typst = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(md2typst)
-
-# 调用转换函数
-md2typst.convert(sys.argv[1], sys.argv[2])
-PY
+  local script_dir="$(cd "$(dirname "$0")" && pwd)"
+  python3 "$script_dir/md2typst.py" "$1" "$2" "${3:-std}"
 }
 
 # ── 6. 数 PDF 页数（复用原脚本逻辑）────────────────────────────────────
