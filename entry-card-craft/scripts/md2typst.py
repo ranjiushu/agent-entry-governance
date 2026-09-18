@@ -52,6 +52,11 @@ def esc(s):
         s = s.replace(ch, "\\" + ch)
     return s
 
+def tstr(s):
+    """Typst 字符串字面量。必须用双引号：Typst 里 ' 不是合法字符串定界符
+    （Python 的 %r 会给出单引号，直接把排版打断）。"""
+    return '"%s"' % s.replace("\\", "\\\\").replace('"', '\\"')
+
 def inline(s):
     # 先处理行内代码/加粗/链接，再对剩余纯文本转义，避免语法字符被二次转义
     parts = []
@@ -62,12 +67,12 @@ def inline(s):
             parts.append(esc(s[pos:m.start()]))
         chunk = m.group(0)
         if chunk.startswith("`"):
-            parts.append("#raw(%r)" % chunk[1:-1])
+            parts.append("#raw(%s)" % tstr(chunk[1:-1]))
         elif chunk.startswith("**"):
             parts.append("*%s*" % esc(chunk[2:-2]))  # Typst 里 *x* 就是加粗
         else:
             mm = re.match(r"\[([^\]]+)\]\(([^)]+)\)", chunk)
-            parts.append("#link(%r)[%s]" % (mm.group(2), esc(mm.group(1))))
+            parts.append("#link(%s)[%s]" % (tstr(mm.group(2)), esc(mm.group(1))))
         pos = m.end()
     parts.append(esc(s[pos:]))
     return "".join(parts)
