@@ -55,13 +55,14 @@ PYEOF
 MODE=install
 REPO=""
 DOCS=""
+DOCS_GIVEN=0
 SELF_SCRIPT=""
 OUT=""
 ARCHIVE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --repo)   REPO="${2:-}"; shift 2 ;;
-    --docs)   DOCS="${2:-}"; shift 2 ;;
+    --docs)   DOCS="${2:-}"; DOCS_GIVEN=1; shift 2 ;;
     --script) SELF_SCRIPT="${2:-}"; shift 2 ;;
     --out)    OUT="${2:-}"; shift 2 ;;
     --archive) ARCHIVE="${2:-}"; shift 2 ;;
@@ -83,7 +84,8 @@ esac
 # 渲染器可能带配套文件（Typst 后端依赖同目录的 md2typst.py 转换器）。
 # 它们必须一起复制，否则装到目标仓库后渲染器找不到自己的零件。
 PAYLOAD_EXTRA=()
-[ "$PAYLOAD_SCRIPT" = "print-entry-doc-typst.sh" ] && PAYLOAD_EXTRA=("md2typst.py")
+# Typst 后端多带两件配套：转换器（渲染器按自身目录找它）与查看模式入口。
+[ "$PAYLOAD_SCRIPT" = "print-entry-doc-typst.sh" ] && PAYLOAD_EXTRA=("md2typst.py" "view-entry-doc.sh")
 PAYLOAD_FILES="SOURCE.md $PAYLOAD_SCRIPT"
 for _e in "${PAYLOAD_EXTRA[@]:-}"; do [ -n "$_e" ] && PAYLOAD_FILES="$PAYLOAD_FILES $_e"; done
 
@@ -133,6 +135,12 @@ DOCSEOF
 # ── 校验模式 ──────────────────────────────────────────────────────────
 if [ "$MODE" = check ]; then
   rc=0
+  # 没显式给 --docs 时，清单对齐到钩子里写死那份：否则「只放 AGENTS.md」的仓
+  # 会被校验的默认名单（AGENTS.md AGENT.md）误报成「声明的文档不存在」。
+  if [ "$DOCS_GIVEN" = 0 ] && [ -f "$HOOK" ]; then
+    _hd="$(sed -n 's/^[[:space:]]*_ep_docs=(\(.*\))[[:space:]]*$/\1/p' "$HOOK" | head -1 | tr -d '"')"
+    [ -n "$_hd" ] && DOCS="$_hd"
+  fi
   hooks_path="$(git -C "$REPO" config --get core.hooksPath || true)"
   if [ "$hooks_path" != ".githooks" ]; then
     echo "[print-install] ❌ core.hooksPath=$hooks_path（应为 .githooks）——钩子不会生效" >&2; rc=1
@@ -274,8 +282,8 @@ if [ -z "$SELF_SCRIPT" ]; then
 **请勿手改**：手改会在下次安装时被覆盖，并让仓库与上游漂移。
 
 - 上游：技能的 `entry-card-craft/scripts/`
-- 文件：渲染器本体 + 它的配套（Typst 后端含 `md2typst.py` 转换器，与渲染器同目录，
-  勿单独移走或改名——渲染器按自身所在目录找它）。
+- 文件：渲染器本体 + 它的配套（Typst 后端含 `md2typst.py` 转换器与 `view-entry-doc.sh`
+  查看模式入口，都与渲染器同目录；勿单独移走或改名——渲染器按自身所在目录找转换器）。
 - 更新：拿到新版技能目录后重跑 `install-print-hook.sh`（幂等，可反复执行）
 - 校验：`install-print-hook.sh --check`
 - 定位：**这不是门禁**。它把入口文档排成 A4 PDF、报页数（给人一个能感觉到的刻度），
@@ -284,6 +292,9 @@ if [ -z "$SELF_SCRIPT" ]; then
   不静默假装成功。无头浏览器版仍在技能里留作回退（重装时加 `--backend chrome`）。
 - 产出：默认 `<仓库>/.git/entry-doc-pdf/`；安装时带 `--out <绝对目录>` 可把产出集中到仓库外
   （多个仓库共用一个输出位时，按仓分子目录传）。
+- 查看模式：`bash tools/entry-doc/view-entry-doc.sh <文档…>` 把已选定的一档逐页导出为
+  PNG，并写 `<输出目录>/INDEX.md` 用相对路径引用每页（图片是给人看的二进制，同名滚动
+  覆盖、不进版本控制）。它等价于渲染器加 `--images`，不是第二套渲染实现。
 - 产出位只留最新：带 `--archive <绝对目录>` 时，同一文档名的旧 PDF 自动移进归档目录，
   产出位永远只有最新一份；不给 `--archive` 就退化为「每个文档名保留最近 10 份」。
 NOTICEEOF

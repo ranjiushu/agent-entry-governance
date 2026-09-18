@@ -1,6 +1,6 @@
 ---
 name: repo-resume
-description: 把 AGENTS.md / CLAUDE.md 这类 Agent 入口文档写成仓库的「简历」，并把它排成 A4 页面做终审：判准落在人的阅读体验上，按 token 预算精简，超出部分安全下沉成指针，最后在提交点装守卫拦截超限。当「入口文档太长 / 要不要精简 / 写得好不好 / 想看看排出来什么样 / 要不要装门禁」时使用。关键词：AGENTS.md, CLAUDE.md, 入口文档, 仓库简历, 上下文预算, token, 精简, 指针化下沉, 打印 PDF, 页面终审, 排版, 门禁, pre-commit。
+description: 把 AGENTS.md / CLAUDE.md 这类 Agent 入口文档写成仓库的「简历」，并把它排成 A4 页面做终审：判准落在人的阅读体验上，按 token 预算精简，超出部分安全下沉成指针，最后在提交点装守卫拦截超限；想查看入口文档的页面时还能逐页导出图片并生成引用它们的 INDEX.md。当「入口文档太长 / 要不要精简 / 写得好不好 / 想看看排出来什么样 / 想查看入口文档的页面 / 要不要装门禁」时使用。关键词：AGENTS.md, CLAUDE.md, 入口文档, 仓库简历, 上下文预算, token, 精简, 指针化下沉, 打印 PDF, 页面终审, 查看入口文档, 页面图片, 排版, 门禁, pre-commit。
 ---
 
 # repo-resume（仓库的简历 · 技能聚合）
@@ -34,6 +34,7 @@ description: 把 AGENTS.md / CLAUDE.md 这类 Agent 入口文档写成仓库的�
 | 给新项目、新仓库写一张入口卡（简历） | entry-card-craft |
 | 简历与 README 怎么分工 | entry-card-craft（代价结构与三测试） |
 | 想看看排出来几页 / 末页是不是只剩一行 | entry-card-craft（打印层） |
+| 想亲眼看页面 / 把入口文档当图看 / 要引用页面本身 | entry-card-craft（查看模式：逐页图片 + INDEX.md） |
 | 终审要过一遍页面 / 拿不准写得好不好 | entry-card-craft（页面终审） |
 | 这段文字像 AI 写的 / 去味 / 文风生硬 | entry-deai-style（上游 humanizer-zh） |
 | 想知道为什么这么定 / 要改判据本身 | entry-card-craft/references/philosophy.md |
@@ -53,7 +54,7 @@ description: 把 AGENTS.md / CLAUDE.md 这类 Agent 入口文档写成仓库的�
 ## 四、运行环境
 
 - entry-doc-governance 的度量器与判据（measure.py / guard.py）：纯标准库，无第三方依赖、不联网、不读环境变量、不依赖版本控制（版本控制只是取将生效版本的增强）。安装器（install-hook.sh）是例外：它把守卫装进 git 仓库，依赖 git、写文件、幂等。
-- entry-card-craft 的打印层（print-entry-doc.sh / install-print-hook.sh）是**判决层**：终审要看实排页面，它给出页数、排版开销与末页填充的判据。它需要无头浏览器，一份要 1–2 秒，所以不进任何阻断路径、不返回非零；缺依赖要显式说「这次没看到页面」，不许静默跳过。
+- entry-card-craft 的打印层（print-entry-doc-typst.sh / install-print-hook.sh）是**判决层**：终审要看实排页面，它给出页数、排版开销与末页填充的判据。它需要排版引擎（默认 Typst，首次自动拉取），一份要 1–2 秒，所以不进任何阻断路径、不返回非零；缺依赖要显式说「这次没看到页面」，不许静默跳过。查看模式（view-entry-doc.sh = 渲染器加 `--images`）把已选定的一档导出为逐页图片并写 INDEX.md，供人通读或引用。
 - entry-deai-style 依赖上游技能 humanizer-zh；缺席时用内置降级层并显式声明。
 
 前提缺失时必须显式响应，不得静默降级。
