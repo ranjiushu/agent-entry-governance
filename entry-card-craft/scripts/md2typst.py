@@ -144,7 +144,7 @@ PREAMBLE = """\
 // 标准档（std）：22mm/20mm 边距、10.5pt、行距 1.7；与原脚本 std 档一一对应。
 #set page(paper: "a4", margin: (x: 20mm, y: 22mm))
 #set text(font: ("Noto Serif CJK SC", "Georgia"), size: 10.5pt, lang: "zh")
-#set par(leading: 0.85em, justify: false)
+#set par(leading: 0.7em, spacing: 0.45em, justify: false)
 #show heading.where(level: 1): it => [
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 17pt, weight: "bold")
   #block(below: 0.45em, above: 1.1em)[#it.body]
@@ -158,6 +158,8 @@ PREAMBLE = """\
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 12pt, weight: "bold")
   #it.body
 ]
+#set list(spacing: 0.16em)
+#set enum(spacing: 0.16em)
 #show raw: it => text(font: "DejaVu Sans Mono", size: 9pt, fill: rgb("#333333"))[#it]
 
 """
@@ -166,7 +168,7 @@ PREAMBLE_FIT = """\
 // 末页合并档（fit）：收紧边距/字号/行距，多容纳约三成
 #set page(paper: "a4", margin: (x: 17mm, y: 16mm))
 #set text(font: ("Noto Serif CJK SC", "Georgia"), size: 9.8pt, lang: "zh")
-#set par(leading: 0.85em, justify: false)
+#set par(leading: 0.42em, spacing: 0.28em, justify: false)
 #show heading.where(level: 1): it => [
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 15pt, weight: "bold")
   #block(below: 0.4em, above: 1em)[#it.body]
@@ -180,6 +182,8 @@ PREAMBLE_FIT = """\
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 11pt, weight: "bold")
   #it.body
 ]
+#set list(spacing: 0.09em)
+#set enum(spacing: 0.09em)
 #show raw: it => text(font: "DejaVu Sans Mono", size: 8.5pt, fill: rgb("#333333"))[#it]
 
 """
