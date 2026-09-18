@@ -144,18 +144,18 @@ PREAMBLE = """\
 // 标准档（std）：22mm/20mm 边距、10.5pt、行距 1.7；与原脚本 std 档一一对应。
 #set page(paper: "a4", margin: (x: 20mm, y: 22mm))
 #set text(font: ("Noto Serif CJK SC", "Georgia"), size: 10.5pt, lang: "zh")
-#set par(leading: 0.7em, spacing: 0.45em, justify: false)
+#set par(leading: 0.7em, spacing: 0.6em, justify: false)
 #show heading.where(level: 1): it => [
-  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 17pt, weight: "bold")
-  #block(below: 0.6em, above: 1.1em)[#it.body]
+  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 19pt, weight: "bold", tracking: 0.02em)
+  #block(below: 18pt, above: 36pt)[#it.body]
   #line(length: 100%, stroke: 0.5pt + rgb("#c9c9c9"))
 ]
-#show heading.where(level: 2): it => block(above: 1.1em, below: 0.8em)[
-  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 13.5pt, weight: "bold")
+#show heading.where(level: 2): it => block(above: 27pt, below: 14pt)[
+  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 15pt, weight: "bold", tracking: 0.02em)
   #it.body
 ]
-#show heading.where(level: 3): it => block(above: 1.1em, below: 0.6em)[
-  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 12pt, weight: "bold")
+#show heading.where(level: 3): it => block(above: 22pt, below: 11pt)[
+  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 12.5pt, weight: "bold", tracking: 0.02em)
   #it.body
 ]
 #set list(spacing: 0.16em)
@@ -168,18 +168,18 @@ PREAMBLE_FIT = """\
 // 末页合并档（fit）：收紧边距/字号/行距，多容纳约三成
 #set page(paper: "a4", margin: (x: 17mm, y: 16mm))
 #set text(font: ("Noto Serif CJK SC", "Georgia"), size: 9.8pt, lang: "zh")
-#set par(leading: 0.42em, spacing: 0.28em, justify: false)
+#set par(leading: 0.6em, spacing: 0.5em, justify: false)
 #show heading.where(level: 1): it => [
-  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 15pt, weight: "bold")
-  #block(below: 0.5em, above: 1em)[#it.body]
+  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 18pt, weight: "bold", tracking: 0.02em)
+  #block(below: 16pt, above: 32pt)[#it.body]
   #line(length: 100%, stroke: 0.5pt + rgb("#c9c9c9"))
 ]
-#show heading.where(level: 2): it => block(above: 1em, below: 0.6em)[
-  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 12pt, weight: "bold")
+#show heading.where(level: 2): it => block(above: 24pt, below: 13pt)[
+  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 14pt, weight: "bold", tracking: 0.02em)
   #it.body
 ]
-#show heading.where(level: 3): it => block(above: 1em, below: 0.5em)[
-  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 11pt, weight: "bold")
+#show heading.where(level: 3): it => block(above: 19pt, below: 10pt)[
+  #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 12pt, weight: "bold", tracking: 0.02em)
   #it.body
 ]
 #set list(spacing: 0.09em)
