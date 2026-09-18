@@ -8,14 +8,14 @@ set -uo pipefail
 # 这是**打印层（判决依据），不是门禁**：本块永不返回非零，渲染失败只留一行说明。
 {
   _ep_root="$(git rev-parse --show-toplevel 2>/dev/null)"
-  _ep_script="$_ep_root/entry-card-craft/scripts/print-entry-doc.sh"
+  _ep_script="$_ep_root/entry-card-craft/scripts/print-entry-doc-typst.sh"
   _ep_docs=("SKILL.md" "entry-deai-style/SKILL.md" "entry-card-craft/SKILL.md" "entry-doc-governance/SKILL.md" )
   if [ -n "$_ep_root" ] && [ -f "$_ep_script" ]; then
     _ep_run=0
     if [ "${AGENT_DOC_PRINT_ALWAYS:-0}" = 1 ]; then
       _ep_run=1
     else
-      _ep_changed="$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null)"
+      _ep_changed="$(git diff-tree --no-commit-id --name-only -r --root HEAD 2>/dev/null)"
       for _ep_d in "${_ep_docs[@]}"; do
         if printf '%s\n' "$_ep_changed" | grep -qxF "$_ep_d"; then _ep_run=1; break; fi
       done

@@ -9,7 +9,9 @@
 #   print-entry-doc-typst.sh                          # 自动发现 AGENTS.md / AGENT.md
 #   print-entry-doc-typst.sh SKILL.md docs/RULES.md   # 指定文件
 #   print-entry-doc-typst.sh --out DIR                # 输出目录（默认 <仓库>/.git/entry-doc-pdf）
-#   print-entry-doc-typst.sh --quiet                  # 只报结果行
+#   print-entry-doc-typst.sh --archive DIR            # 归档目录：同一文档名只留最新一份，旧的移到这里
+#                                                     #   不给 --archive 时退化为「保留最近 KEEP 份」
+#   print-entry-doc-typst.sh --quiet                  # 只报结果行（适合挂进钩子）
 #   print-entry-doc-typst.sh --fetch-typst            # 只拉取钉死的 Typst 到缓存，不排版
 #
 # 排版档（两档，页数以标准档为准）
@@ -55,14 +57,17 @@ set -uo pipefail
 TAG="[print-typst]"
 QUIET=0
 OUT_DIR=""
+ARCHIVE_DIR=""
 TARGETS=()
-KEEP="${AGENT_DOC_PDF_KEEP:-10}"
+KEEP="${AGENT_DOC_PDF_KEEP:-10}"                  # 无 --archive 时的滚动保留份数
+ARCHIVE_KEEP="${AGENT_DOC_PDF_ARCHIVE_KEEP:-30}"  # 归档目录每个文档名的封顶份数（0 = 不限）
 FETCH_ONLY=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --quiet)  QUIET=1; shift ;;
     --out)    OUT_DIR="${2:-}"; shift 2 ;;
+    --archive) ARCHIVE_DIR="${2:-}"; shift 2 ;;
     --fetch-typst) FETCH_ONLY=1; shift ;;
     -h|--help) awk 'NR==1{next} /^#/{print; next} {exit}' "$0"; exit 0 ;;
     -*) echo "$TAG 未知参数：$1" >&2; exit 1 ;;
@@ -291,7 +296,7 @@ render_one() {
 
   # 输出统计信息
   python3 - "$pdf" "$tmp/doc.md" "$note" "$QUIET" "$base" <<'PY'
-import re, sys
+import os, re, sys
 pdf, md, note, quiet, base = sys.argv[1:6]
 raw = open(pdf, "rb").read()
 pages = len(re.findall(rb"/Type\s*/Page(?![s])", raw))
@@ -302,7 +307,7 @@ no_cjk = re.sub(CJK, "", text)
 ascii_chars = len(re.sub(r"\s", "", no_cjk))
 est = (cjk + ascii_chars * 0.5) / 1400.0
 print("📄 %s（%s）实排 %d 页｜算术 %.1f 页｜排版开销 %+.1f 页"
-      % (base, note, pages, est, pages - est))
+      % (os.path.basename(pdf), note, pages, est, pages - est))
 if not quiet:
     print("   路径：%s" % pdf)
     print("   注：算术页数是纯体积模型；实排多出来的部分是短行、表格、项目符号造成的行尾留白。")
@@ -310,9 +315,22 @@ PY
 
   rm -rf "$tmp"
 
-  # 保留策略：滚动保留最近 $KEEP 份
-  if [ "$KEEP" -gt 0 ] 2>/dev/null; then
-    ls -1t "$dest/${base}-"*.pdf 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do
+  # 保留策略（与 print-entry-doc.sh 逐字一致）
+  #   给了 --archive：产出位只留最新一份，旧的移进归档（归档再按 ARCHIVE_KEEP 封顶）
+  #   没给：退化为滚动保留最近 $KEEP 份（一个 PDF 内嵌中文字体约 600KB，不清理会攒体积）
+  if [ -n "$ARCHIVE_DIR" ]; then
+    ls -1t "$dest/${base}-"*.pdf 2>/dev/null | tail -n +2 | while read -r old; do
+      if mkdir -p "$ARCHIVE_DIR" 2>/dev/null && mv -f "$old" "$ARCHIVE_DIR/" 2>/dev/null; then
+        [ "$QUIET" = 1 ] || echo "$TAG   归档：$(basename "$old") → $ARCHIVE_DIR"
+      fi
+    done
+    if [ "$ARCHIVE_KEEP" -gt 0 ] 2>/dev/null; then
+      ls -1t "$ARCHIVE_DIR/${base}-"*.pdf 2>/dev/null | tail -n +"$((ARCHIVE_KEEP + 1))" | while read -r gone; do
+        rm -f "$gone"
+      done
+    fi
+  elif [ "$KEEP" -gt 0 ] 2>/dev/null; then
+    ls -1t "$dest/${base}-"*.pdf 2>/dev/null | tail -n +"$((KEEP + 1))" | while read -r old; do
       rm -f "$old"
     done
   fi

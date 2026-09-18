@@ -21,24 +21,24 @@ repo-resume 是一个 Agent 技能：把 `AGENTS.md`、`CLAUDE.md` 这类入口�
 
 ### 为什么多这一步
 
-Markdown 本来就能读，再排一遍看着多余。理由是页面比源码诚实：编辑器里一行超长的表格只是一坨，排到页面上才看得出它散架。多排这一遍，买的是「通读」这个动作：人读得进去，才会读、才会改、才会把自己的判断放进来；没人维护的入口文档会烂掉，Agent 开工拿到的上下文跟着一起错。代价是 1–2 秒加一次浏览器渲染，换不来内容，也管不了机器侧的预算（那是守卫的事）。理由写全在 [entry-card-craft/references/philosophy.md](entry-card-craft/references/philosophy.md)。
+Markdown 本来就能读，再排一遍看着多余。理由是页面比源码诚实：编辑器里一行超长的表格只是一坨，排到页面上才看得出它散架。多排这一遍，买的是「通读」这个动作：人读得进去，才会读、才会改、才会把自己的判断放进来；没人维护的入口文档会烂掉，Agent 开工拿到的上下文跟着一起错。代价是每次提交多跑一遍渲染（Typst 首次还要拉一次编译器），换不来内容，也管不了机器侧的预算（那是守卫的事）。理由写全在 [entry-card-craft/references/philosophy.md](entry-card-craft/references/philosophy.md)。
 
 ```bash
-bash entry-card-craft/scripts/print-entry-doc.sh SKILL.md entry-*/SKILL.md
+bash entry-card-craft/scripts/print-entry-doc-typst.sh SKILL.md entry-*/SKILL.md
 ```
 
 ```
-📄 SKILL-20260917-114423.pdf（工作区版）实排 2 页｜算术 1.2 页｜排版开销 +0.8 页
-📄 entry-card-craft-SKILL-20260917-114426.pdf（工作区版）实排 2 页｜算术 1.6 页｜排版开销 +0.4 页
-📄 entry-deai-style-SKILL-20260917-114428.pdf（工作区版）实排 1 页｜算术 0.6 页｜排版开销 +0.4 页
-📄 entry-doc-governance-SKILL-20260917-114430.pdf（工作区版）实排 3 页｜算术 1.9 页｜排版开销 +1.1 页
+📄 SKILL-20260918-125105.pdf（工作区版）实排 2 页｜算术 1.5 页｜排版开销 +0.5 页
+📄 entry-card-craft-SKILL-20260918-125107.pdf（工作区版）实排 2 页｜算术 1.6 页｜排版开销 +0.4 页
+📄 entry-deai-style-SKILL-20260918-125109.pdf（工作区版）实排 1 页｜算术 0.6 页｜排版开销 +0.4 页
+📄 entry-doc-governance-SKILL-20260918-125110.pdf（工作区版·末页合并）实排 2 页｜算术 1.9 页｜排版开销 +0.1 页
 ```
 
 这行结果里有两样东西。实排页数是给人看的刻度；算术页数的差是**排版开销**，表格、短行、项目符号的留白都记在它头上。末页只剩一点点时脚本会自动紧排一次，真少一页才采用，产出标「末页合并」。简历不给人留一行空白页。
 
 正文用衬线体（Georgia 加思源宋体，标题黑体），对标 Typora 的输出质量。产出默认落在仓库的 `.git/` 下，用 `--out`、`--archive` 指定集中位置。
 
-打印不阻断流程：单份要 1 到 2 秒，还依赖无头浏览器（设 `CHROME_PATH` 或自动探测），所以挂 post-commit，永不返回非零。这不是说它次要：**守卫管有没有失控，页面管读不读得下去。**缺浏览器时脚本会明说这次没排成，终审据此标注「未经页面终审」，不装作看过。
+打印不阻断流程：要跑一次渲染，Typst 首次还要拉一次编译器（版本钉死、核对 sha256 后进用户缓存），所以挂 post-commit，永不返回非零。这不是说它次要：**守卫管有没有失控，页面管读不读得下去。**缺编译器时脚本会明说这次没排成，终审据此标注「未经页面终审」，不装作看过。无头浏览器版仍在，`--backend chrome` 可回退。
 
 ## 快速开始
 
@@ -103,7 +103,8 @@ entry-card-craft/                   简历本身：判决、排版、打印、�
 ├── SKILL.md
 ├── references/philosophy.md        设计理据：核心假设与判据的理由，按需加载
 ├── references/final-audit.md       终审清单（叙事 / 排版 / 文风 / 调性），终审时才读
-└── scripts/{print-entry-doc.sh, install-print-hook.sh}    打印层与它的安装器
+└── scripts/                        打印层：print-entry-doc-typst.sh + md2typst.py（默认 Typst 后端）
+                                    print-entry-doc.sh（无头浏览器回退）+ install-print-hook.sh
 entry-doc-governance/               文档治理：度量、阈值、安全下沉、提交点守卫
 ├── SKILL.md
 ├── references/final-audit.md       终审清单（关口 / 事实源 / 度量 / 搬迁），终审时才读
@@ -146,7 +147,7 @@ entry-deai-style/SKILL.md           去 AI 味（上游 humanizer-zh，内置降
 ## 运行环境
 
 - 度量器与判据（`entry-doc-governance`）：Python 3.8+ 标准库，不联网、不写文件、不依赖版本控制（版本控制只用于取将生效的版本）。
-- 打印层（`entry-card-craft`）：bash + Python 3.8+ 标准库，另需无头浏览器（`CHROME_PATH` 或自动探测）；不阻断流程。
+- 打印层（`entry-card-craft`）：bash + Python 3.8+ 标准库，另需 Typst（版本由脚本钉死、首次运行自动拉取到用户缓存并核对 sha256）；不阻断流程。无头浏览器版保留作回退（`--backend chrome`）。
 - 安装器：往 git 仓库的钩子位装东西，需要 git。
 - 去味（`entry-deai-style`）：依赖上游技能 `humanizer-zh`，缺席时用内置降级四条并显式声明。
 - 入口文档的命名和层数由所在环境声明。脚本默认发现 `AGENTS.md` / `AGENT.md`，其他命名用 `--names` 注入，不改源码。

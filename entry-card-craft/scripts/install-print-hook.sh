@@ -2,13 +2,17 @@
 # 把「入口文档打印」装进某个 git 仓库（**判决层**：不阻断流程，但它是页面终审的依据）。
 #
 # 装两样东西：
-#   <repo>/tools/entry-doc/print-entry-doc.sh   渲染器本体（**入库**，随 clone 走）
+#   <repo>/tools/entry-doc/<渲染器>             渲染器本体（**入库**，随 clone 走）
 #   <repo>/.githooks/post-commit                薄壳调用块（标记包裹，幂等）
+# 渲染后端（--backend，默认 typst）：
+#   typst  = print-entry-doc-typst.sh  Typst 排版；版本钉死、首次运行自动拉取到用户缓存
+#   chrome = print-entry-doc.sh        无头浏览器版；留作回退（不想联网拉 Typst 时）
 # 并按需设置 git config core.hooksPath=.githooks。
 #
 # 为什么挂 post-commit 而不是 pre-commit：
 #   渲染要 1–2 秒，而**慢钩子会把人逼去用 --no-verify**，届时 pre-commit 里的真守卫
 #   会被一起跳过。所以它挂在提交完成之后，且本块**永不返回非零** —— 不阻断不等于次要，它管的是判决那一侧。
+#   （Typst 版渲染本身很快，但首次运行要拉取编译器；挂 post-commit 的理由不变。）
 #
 # 用法：
 #   bash install-print-hook.sh                          # 装到当前仓库，自动发现 AGENTS.md
@@ -21,6 +25,7 @@
 #                                                       #   多个仓库共用一个输出位时，按仓分子目录传入即可
 #   bash install-print-hook.sh --archive <绝对目录>      # 归档目录：产出位只留最新一份，旧的移进去
 #                                                       #   （不给就退化为「保留最近 KEEP 份」）
+#   bash install-print-hook.sh --backend typst|chrome    # 选渲染后端（默认 typst）
 #   bash install-print-hook.sh --check | --dry-run | --uninstall
 #
 # 跳过规则：本次提交**没碰**声明的入口文档时自动跳过（存量豁免）；
@@ -29,7 +34,8 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-PAYLOAD_SCRIPT="print-entry-doc.sh"
+BACKEND="typst"
+PAYLOAD_SCRIPT=""   # 由 --backend 决定，见下方参数解析之后
 MARK_BEGIN="# >>> repo-resume: entry-doc-print (start) >>>"
 MARK_END="# <<< repo-resume: entry-doc-print (end) <<<"
 
@@ -59,6 +65,7 @@ while [ $# -gt 0 ]; do
     --script) SELF_SCRIPT="${2:-}"; shift 2 ;;
     --out)    OUT="${2:-}"; shift 2 ;;
     --archive) ARCHIVE="${2:-}"; shift 2 ;;
+    --backend) BACKEND="${2:-}"; shift 2 ;;
     --check)  MODE=check; shift ;;
     --dry-run) MODE=dryrun; shift ;;
     --uninstall) MODE=uninstall; shift ;;
@@ -66,6 +73,19 @@ while [ $# -gt 0 ]; do
     *) echo "[print-install] 未知参数：$1（--help 看用法）" >&2; exit 1 ;;
   esac
 done
+
+case "$BACKEND" in
+  typst)  PAYLOAD_SCRIPT="print-entry-doc-typst.sh" ;;
+  chrome) PAYLOAD_SCRIPT="print-entry-doc.sh" ;;
+  *) echo "[print-install] ❌ 未知后端：$BACKEND（可选 typst | chrome）" >&2; exit 1 ;;
+esac
+
+# 渲染器可能带配套文件（Typst 后端依赖同目录的 md2typst.py 转换器）。
+# 它们必须一起复制，否则装到目标仓库后渲染器找不到自己的零件。
+PAYLOAD_EXTRA=()
+[ "$PAYLOAD_SCRIPT" = "print-entry-doc-typst.sh" ] && PAYLOAD_EXTRA=("md2typst.py")
+PAYLOAD_FILES="SOURCE.md $PAYLOAD_SCRIPT"
+for _e in "${PAYLOAD_EXTRA[@]:-}"; do [ -n "$_e" ] && PAYLOAD_FILES="$PAYLOAD_FILES $_e"; done
 
 # ── 定位仓库 ──────────────────────────────────────────────────────────
 if [ -z "$REPO" ]; then REPO="$(git rev-parse --show-toplevel 2>/dev/null || true)"; fi
@@ -141,9 +161,24 @@ if [ "$MODE" = check ]; then
     [ -d "$OUT" ] || echo "[print-install] ⚠️  产出目录尚不存在（首次渲染自建）：$OUT" >&2
   fi
   if [ ! -f "$RUNNER" ]; then
+    _other="print-entry-doc-typst.sh"
+    [ "$PAYLOAD_SCRIPT" = "print-entry-doc-typst.sh" ] && _other="print-entry-doc.sh"
+    if [ -z "$SELF_SCRIPT" ] && [ -f "$REPO/tools/entry-doc/$_other" ]; then
+      echo "[print-install] ⚠️  这个仓库装的是另一个后端（$_other）；用对应的 --backend 重跑校验" >&2
+    fi
     echo "[print-install] ❌ 渲染器不在位：$RUNNER_REL（自举模式指向的那份可能被移走了）" >&2; rc=1
   elif [ -z "$SELF_SCRIPT" ] && ! cmp -s "$HERE/$PAYLOAD_SCRIPT" "$RUNNER"; then
-    echo "[print-install] ⚠️  渲染器与上游不一致（仓库副本被手改过，或上游已更新）" >&2; rc=1
+    echo "[print-install] ⚠️  渲染器与上游不一致（后端 $BACKEND；仓库副本被手改过、装了别的后端，或上游已更新）" >&2; rc=1
+  fi
+  if [ -z "$SELF_SCRIPT" ]; then
+    for _e in "${PAYLOAD_EXTRA[@]:-}"; do
+      [ -n "$_e" ] || continue
+      if [ ! -f "$PAYLOAD_DIR/$_e" ]; then
+        echo "[print-install] ❌ 渲染器的配套文件不在位：tools/entry-doc/$_e" >&2; rc=1
+      elif ! cmp -s "$HERE/$_e" "$PAYLOAD_DIR/$_e"; then
+        echo "[print-install] ⚠️  配套文件与上游不一致：$_e" >&2; rc=1
+      fi
+    done
   fi
   if [ "$rc" = 0 ]; then
     echo "[print-install] ✅ 已正确安装：$REPO"
@@ -175,7 +210,7 @@ $MARK_BEGIN
     if [ "\${AGENT_DOC_PRINT_ALWAYS:-0}" = 1 ]; then
       _ep_run=1
     else
-      _ep_changed="\$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null)"
+      _ep_changed="\$(git diff-tree --no-commit-id --name-only -r --root HEAD 2>/dev/null)"
       for _ep_d in "\${_ep_docs[@]}"; do
         if printf '%s\\n' "\$_ep_changed" | grep -qxF "\$_ep_d"; then _ep_run=1; break; fi
       done
@@ -197,7 +232,10 @@ if [ "$MODE" = uninstall ]; then
   fi
   if [ -z "$SELF_SCRIPT" ]; then
     rm -rf "$PAYLOAD_DIR/__pycache__"
-    rm -f "$PAYLOAD_DIR/$PAYLOAD_SCRIPT" "$PAYLOAD_DIR/SOURCE.md"
+    rm -f "$PAYLOAD_DIR/SOURCE.md"
+    for _e in "$PAYLOAD_SCRIPT" "${PAYLOAD_EXTRA[@]:-}"; do
+      [ -n "$_e" ] && rm -f "$PAYLOAD_DIR/$_e"
+    done
     rmdir "$PAYLOAD_DIR" 2>/dev/null || true
   fi
   echo "[print-install]    提示：若 $HOOK 已无其他内容，可自行删除该空壳钩子"
@@ -210,7 +248,7 @@ if [ "$MODE" = dryrun ]; then
   if [ -n "$SELF_SCRIPT" ]; then
     echo "[print-install] [dry-run] 渲染器：复用仓库内 $RUNNER_REL（不复制）"
   else
-    echo "[print-install] [dry-run] 将写入：$PAYLOAD_DIR/{$PAYLOAD_SCRIPT,SOURCE.md}"
+    echo "[print-install] [dry-run] 将写入：$PAYLOAD_DIR/{$(echo $PAYLOAD_FILES | tr ' ' ',')}"
   fi
   echo "[print-install] [dry-run] 将在 $HOOK 写入/替换标记块"
   echo "[print-install] [dry-run] 将设置 core.hooksPath=.githooks"
@@ -226,6 +264,9 @@ if [ -z "$SELF_SCRIPT" ]; then
   mkdir -p "$PAYLOAD_DIR"
   cp "$HERE/$PAYLOAD_SCRIPT" "$PAYLOAD_DIR/$PAYLOAD_SCRIPT"
   chmod +x "$PAYLOAD_DIR/$PAYLOAD_SCRIPT"
+  for _e in "${PAYLOAD_EXTRA[@]:-}"; do
+    [ -n "$_e" ] && cp "$HERE/$_e" "$PAYLOAD_DIR/$_e"
+  done
   cat > "$PAYLOAD_DIR/SOURCE.md" <<'NOTICEEOF'
 # tools/entry-doc —— 入口文档打印（分发副本，判决层）
 
@@ -233,11 +274,14 @@ if [ -z "$SELF_SCRIPT" ]; then
 **请勿手改**：手改会在下次安装时被覆盖，并让仓库与上游漂移。
 
 - 上游：技能的 `entry-card-craft/scripts/`
+- 文件：渲染器本体 + 它的配套（Typst 后端含 `md2typst.py` 转换器，与渲染器同目录，
+  勿单独移走或改名——渲染器按自身所在目录找它）。
 - 更新：拿到新版技能目录后重跑 `install-print-hook.sh`（幂等，可反复执行）
 - 校验：`install-print-hook.sh --check`
 - 定位：**这不是门禁**。它把入口文档排成 A4 PDF、报页数（给人一个能感觉到的刻度），
   并报出「排版开销」＝实排页数 − 算术页数。它挂在 post-commit，永不阻断任何提交。
-- 依赖：无头浏览器（`CHROME_PATH` 或自动探测）；缺了就跳过并说明，不静默假装成功。
+- 依赖：Typst（版本由脚本钉死，首次运行自动拉取到用户缓存并核对 sha256）；缺了就跳过并说明，
+  不静默假装成功。无头浏览器版仍在技能里留作回退（重装时加 `--backend chrome`）。
 - 产出：默认 `<仓库>/.git/entry-doc-pdf/`；安装时带 `--out <绝对目录>` 可把产出集中到仓库外
   （多个仓库共用一个输出位时，按仓分子目录传）。
 - 产出位只留最新：带 `--archive <绝对目录>` 时，同一文档名的旧 PDF 自动移进归档目录，
