@@ -111,6 +111,7 @@ entry-card-craft/                   简历本身：判决、排版、打印、�
                                     print-entry-doc.sh（无头浏览器回退）+ install-print-hook.sh
                                     view-entry-doc.sh（查看模式：逐页图片 + INDEX.md）
                                     serve-entry-doc.sh（把产出目录挂成静态服务，给手机/浏览器看）
+                                    selftest.sh（改完脚本跑一遍：26 条结构断言，不写死页数）
 entry-doc-governance/               文档治理：度量、阈值、安全下沉、提交点守卫
 ├── SKILL.md
 ├── references/final-audit.md       终审清单（关口 / 事实源 / 度量 / 搬迁），终审时才读
