@@ -27,6 +27,15 @@
 #   字体：需要 Noto Serif CJK SC（正文）和 Noto Sans CJK SC（标题），
 #         否则 Typst 会回退到默认字体，可能影响排版效果。
 #
+# 中文排版（为什么不做「中英文之间加空格」那件事）
+#   中西文间隙交给 Typst 原生 cjk-latin-spacing（默认 auto，约 0.25em 间隙），
+#   在源文本里插字面空格会与它叠加、并污染行内代码。
+#   软换行拼接见 md2typst.py 的 smart_join：CJK 一侧不补空格，
+#   避开「中文断行处多出一个空格」（Typst 里源码换行即空格）。
+#   转换器刻意不引第三方包，保持零依赖、可离线编译；若愿意接受运行时依赖，
+#   md2typst(PyPI) 或 cmarker(Typst 包) 均可替换——实测页数一致，
+#   但会在 git 钩子里引入 pip 依赖或首次编译联网取包。
+#
 # 输出位置为什么选 .git/：不进版本控制、不产生二进制变更、不用动 .gitignore。
 # 关掉渲染：AGENT_DOC_PRINT_OFF=1（或干脆不装钩子）。
 
