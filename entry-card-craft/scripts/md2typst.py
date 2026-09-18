@@ -4,8 +4,39 @@
    行内覆盖：`code`、**bold**、[text](link)
    与原 md2html 的唯一差异：输出目标从 HTML 变成 Typst markup，样式改用 Typst 的
    #set / #show 规则统一声明（相当于原来那份 CSS 的等价物）。
+   中文细节：中西文间隙交给 Typst 原生 cjk-latin-spacing（默认 auto，约 0.25em），
+   中文软换行处不补空格——见 smart_join。
 """
 import re, sys
+
+# CJK 相关码位区间：汉字、扩展 A、中文标点、假名、全角/半角兼容形式。
+# 仅用于判断「软换行拼接处要不要补空格」，不用于改写正文内容。
+CJK_RANGES = (
+    (0x2E80, 0x2EFF), (0x3000, 0x303F), (0x3040, 0x30FF), (0x3400, 0x4DBF),
+    (0x4E00, 0x9FFF), (0xF900, 0xFAFF), (0xFF00, 0xFFEF), (0x20000, 0x2FA1F),
+)
+
+def is_cjk(ch):
+    if not ch:
+        return False
+    o = ord(ch)
+    return any(lo <= o <= hi for lo, hi in CJK_RANGES)
+
+def smart_join(parts):
+    """拼接 markdown 软换行。只要拼接处任一侧是 CJK 就不插空格。
+
+    两个坑都由此避开，且都交给 Typst 原生处理：
+      * 中文断行处多出一个空格——Typst 里源码换行即空格，中文行内不需要它；
+      * 中西文之间——Typst 的 cjk-latin-spacing（默认 auto）已自动插入约 0.25em 间隙，
+        这里再补一个字面空格就变成「间隙 + 全角空格」，过宽。
+    纯西文之间照旧补一个空格（软换行语义）。
+    """
+    out = ""
+    for p in parts:
+        if out and not (is_cjk(out[-1]) or is_cjk(p[:1])):
+            out += " "
+        out += p
+    return out
 
 QUOTE = re.compile(r"^\s*>\s?")
 UL = re.compile(r"^\s*[-*+]\s+")
@@ -109,7 +140,7 @@ def render(lines, depth=0):
                 while (i < n and lines[i].strip() and not pat.match(lines[i])
                        and not FENCE.match(lines[i]) and not QUOTE.match(lines[i])
                        and not HEAD.match(lines[i]) and "|" not in lines[i]):
-                    item += " " + lines[i].strip()
+                    item = smart_join([item, lines[i].strip()])
                     i += 1
                 out.append("%s %s" % (marker, inline(item)))
             continue
@@ -134,7 +165,7 @@ def render(lines, depth=0):
                and not HR.match(lines[i]) and "|" not in lines[i]):
             buf.append(lines[i].strip())
             i += 1
-        out.append(inline(" ".join(buf)))
+        out.append(inline(smart_join(buf)))
         out.append("")
         continue
     return "\n".join(out)
@@ -143,7 +174,7 @@ PREAMBLE = """\
 // ── 页面与字体：对应原 print-entry-doc.sh 里 CSS 的 @page / body / h1-h4 规则 ──
 // 标准档（std）：22mm/20mm 边距、10.5pt、行距 1.7；与原脚本 std 档一一对应。
 #set page(paper: "a4", margin: (x: 20mm, y: 22mm))
-#set text(font: ("Noto Serif CJK SC", "Georgia"), size: 10.5pt, lang: "zh")
+#set text(font: ("Noto Serif CJK SC", "Georgia"), size: 10.5pt, lang: "zh", cjk-latin-spacing: auto)
 #set par(leading: 0.7em, spacing: 0.6em, justify: false)
 #show heading.where(level: 1): it => [
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 19pt, weight: "bold", tracking: 0.02em)
@@ -167,7 +198,7 @@ PREAMBLE = """\
 PREAMBLE_FIT = """\
 // 末页合并档（fit）：收紧边距/字号/行距，多容纳约三成
 #set page(paper: "a4", margin: (x: 17mm, y: 16mm))
-#set text(font: ("Noto Serif CJK SC", "Georgia"), size: 9.8pt, lang: "zh")
+#set text(font: ("Noto Serif CJK SC", "Georgia"), size: 9.8pt, lang: "zh", cjk-latin-spacing: auto)
 #set par(leading: 0.6em, spacing: 0.5em, justify: false)
 #show heading.where(level: 1): it => [
   #set text(font: ("Noto Sans CJK SC", "Helvetica"), size: 18pt, weight: "bold", tracking: 0.02em)
