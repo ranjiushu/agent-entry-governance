@@ -429,6 +429,8 @@ if [ "$IMAGES" = 1 ] && [ -n "${IMG_REC:-}" ] && [ -s "$IMG_REC" ]; then
   if [ -n "$_idx_dir" ]; then
     write_index "$IMG_REC" "$_idx_dir/INDEX.md"
     say "INDEX.md：$_idx_dir/INDEX.md"
+    # 本地路径很多渲染器（手机聊天 App 尤其）加载不出来，http 才行——把最后一步递出去。
+    say "要给人看（手机 / 浏览器 / 对话里的 markdown）：bash \"$(cd "$(dirname "$0")" && pwd)/serve-entry-doc.sh\" --dir \"$_idx_dir\""
   fi
 fi
 [ -n "${IMG_REC:-}" ] && rm -f "$IMG_REC"

@@ -84,8 +84,8 @@ esac
 # 渲染器可能带配套文件（Typst 后端依赖同目录的 md2typst.py 转换器）。
 # 它们必须一起复制，否则装到目标仓库后渲染器找不到自己的零件。
 PAYLOAD_EXTRA=()
-# Typst 后端多带两件配套：转换器（渲染器按自身目录找它）与查看模式入口。
-[ "$PAYLOAD_SCRIPT" = "print-entry-doc-typst.sh" ] && PAYLOAD_EXTRA=("md2typst.py" "view-entry-doc.sh")
+# Typst 后端多带几件配套：转换器（渲染器按自身目录找它）、查看模式入口、看图的静态服务。
+[ "$PAYLOAD_SCRIPT" = "print-entry-doc-typst.sh" ] && PAYLOAD_EXTRA=("md2typst.py" "view-entry-doc.sh" "serve-entry-doc.sh")
 PAYLOAD_FILES="SOURCE.md $PAYLOAD_SCRIPT"
 for _e in "${PAYLOAD_EXTRA[@]:-}"; do [ -n "$_e" ] && PAYLOAD_FILES="$PAYLOAD_FILES $_e"; done
 
@@ -295,6 +295,9 @@ if [ -z "$SELF_SCRIPT" ]; then
 - 查看模式：`bash tools/entry-doc/view-entry-doc.sh <文档…>` 把已选定的一档逐页导出为
   PNG，并写 `<输出目录>/INDEX.md` 用相对路径引用每页（图片是给人看的二进制，同名滚动
   覆盖、不进版本控制）。它等价于渲染器加 `--images`，不是第二套渲染实现。
+- 把它递给人：本地路径在很多渲染器里加载不出来（手机聊天 App 尤其），`serve-entry-doc.sh`
+  把产出目录挂成静态服务并打印可直接粘进 markdown 的 http 引用。它是**长驻进程**，
+  要在持久终端里前台跑，别挂进钩子。
 - 产出位只留最新：带 `--archive <绝对目录>` 时，同一文档名的旧 PDF 自动移进归档目录，
   产出位永远只有最新一份；不给 `--archive` 就退化为「每个文档名保留最近 10 份」。
 NOTICEEOF
